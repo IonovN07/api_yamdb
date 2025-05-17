@@ -1,18 +1,19 @@
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, mixins, viewsets
-from rest_framework.pagination import(
+from rest_framework import viewsets
+from rest_framework.pagination import (
     PageNumberPagination, LimitOffsetPagination
 )
 from django_filters.rest_framework import DjangoFilterBackend
 
 from api.filters import TitleFilter
-from api.mixins import  ListCreateDestroyViewSet
+from api.mixins import AllowedMethodsMixin, ListCreateDestroyViewSet
 from api.serializers import (
     CategorySerializer,
     GenreSerializer,
-    TitleSerializer,
     CommentSerializer,
-    TitleSerializer,
+    TitleReadSerializer,
+    TitleWriteSerializer,
     ReviewSerializer,
 )
 from reviews.models import Category, Genre, Title, Review
@@ -20,46 +21,44 @@ from users.permissions import (
     IsAuthorModeratorAdminOrReadOnly,
     IsAdminOrReadOnly,
 )
-from users.permissions import(
-    IsAdminOrReadOnly
-    )
-from review.models import Category, Genre, Title
 
-class TitleViewSet(viewsets.ModelViewSet):
-    """Представление произведений."""
 
-    serializer_class = TitleSerializer
+class TitleViewSet(AllowedMethodsMixin, viewsets.ModelViewSet):
+    """Получить список всех произведений."""
+
     pagination_class = LimitOffsetPagination
     permission_classes = (IsAdminOrReadOnly,)
-    filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend, )
     filterset_class = TitleFilter
 
     def get_queryset(self):
         return (
             Title.objects.annotate(rating=Avg('reviews__score'))
-            .all()
-            .order_by('-year')
-            .select_related('category')
-            .prefetch_related('genres')
+            .all().order_by('-year')
         )
+
+    def get_serializer_class(self):
+        if self.action in ('list', 'retrieve'):
+            return TitleReadSerializer
+        return TitleWriteSerializer
 
 
 class CategoryViewSet(ListCreateDestroyViewSet):
-    """Представление категорий."""
+    """Получить список всех категорий."""
 
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
 class GenreViewSet(ListCreateDestroyViewSet):
-    """Представление жанров."""
+    """Получить список всех жанров."""
 
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    """Представление отзывов."""
+    """Получить список всех отзывов."""
 
     serializer_class = ReviewSerializer
     permission_classes = (IsAuthorModeratorAdminOrReadOnly,)
@@ -74,7 +73,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    """Представление комментариев."""
+    """Получить список всех комментариев."""
 
     serializer_class = CommentSerializer
     permission_classes = (IsAuthorModeratorAdminOrReadOnly,)
@@ -83,6 +82,6 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Получение всех комментов к отзыву."""
-        
+
         review = get_object_or_404(Review, id=self.kwargs['review_id'])
         return review.comments.all().order_by('-id')

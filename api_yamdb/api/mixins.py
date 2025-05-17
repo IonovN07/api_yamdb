@@ -1,6 +1,6 @@
 from rest_framework import mixins, viewsets
 from rest_framework.filters import SearchFilter
-from users.permissions import IsAuthorModeratorAdminOrReadOnly
+from users.permissions import IsAdminOrReadOnly
 
 
 class ListCreateDestroyViewSet(
@@ -11,5 +11,14 @@ class ListCreateDestroyViewSet(
 ):
     filter_backends = (SearchFilter,)
     search_fields = ('name',)
-    permission_classes = (IsAuthorModeratorAdminOrReadOnly,)
+    permission_classes = (IsAdminOrReadOnly,)
     lookup_field = 'slug'
+
+
+class AllowedMethodsMixin:
+    http_method_names = (
+        'get',
+        'post',
+        'patch',
+        'delete',
+    )
