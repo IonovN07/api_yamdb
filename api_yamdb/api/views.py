@@ -1,3 +1,13 @@
-from django.shortcuts import render
+from rest_framework import filters, mixins, viewsets
 
-# Create your views here.
+from review.models import Category, Genre, Title
+
+
+class TitleVievSet(viewsets.ModelViewSet):
+    pass
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    pass
+
+class TitleVievSet(viewsets.ModelViewSet):
+    pass
