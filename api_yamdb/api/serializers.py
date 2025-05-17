@@ -1,23 +1,24 @@
 import datetime as dt
 
+from django.shortcuts import get_object_or_404
 from django.db.models import Avg
 from rest_framework import serializers
 
-from reviews.models import Category, Genre, Title
+from reviews.models import Category, Genre, Title, Review, Comment
 
 
 class CategorySerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Category
-        fields = '__all__'
+        lookup_field = 'slug'
+        fields = ('name', 'slug')
 
 
 class GenreSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Genre
-        fields = '__all__'
+        lookup_field = 'slug'
+        fields = ('name', 'slug')
 
 
 class TitleSerializer(serializers.ModelSerializer):
@@ -68,3 +69,56 @@ class TitleSerializer(serializers.ModelSerializer):
                 'Год произведения не может быть больше текущего года.'
             )
         return year
+
+class ReviewSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username'
+    )
+
+    class Meta:
+        model = Review
+        fields = (
+            'id',
+            'text',
+            'author',
+            'score',
+            'pub_date'
+        )
+        read_only_fields = ('title',)
+
+    def validate(self, data):
+        if self.context['request'].method == 'POST':
+            title_id = self.context['view'].kwargs['title_id']
+            title = get_object_or_404(Title, id=title_id)
+            author = self.context['request'].user
+            if Review.objects.filter(title=title, author=author).exists():
+                raise serializers.ValidationError(
+                    'You have already reviewed this title'
+                )
+            data['author'] = author
+            data['title'] = title
+        return data
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username'
+    )
+
+    class Meta:
+        model = Comment
+        fields = (
+            'id',
+            'text',
+            'author',
+            'pub_date'
+        )
+        read_only_fields = ('review',)
+
+    def create(self, validated_data):
+        validated_data['author'] = self.context['request'].user
+        review_id = self.context['view'].kwargs['review_id']
+        validated_data['review'] = get_object_or_404(Review, id=review_id)
+        return super().create(validated_data)
