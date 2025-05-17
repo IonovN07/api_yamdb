@@ -1,7 +1,5 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db.models.signals import post_delete, post_save
-from django.dispatch import receiver
 
 from api_yamdb.settings import LENGTH_STR
 from users.models import User
@@ -136,17 +134,6 @@ class Review(BaseModelReviw):
     def __str__(self):
         """Метод для возврата названия объекта."""
         return self.text[:LENGTH_STR]
-
-
-'''
-@receiver([post_delete, post_save], sender=Review)
-def title_rating_change(sender, instance, using, **kwargs):
-    """Каждый раз при создании, изменении или удалении отзыва
-       будет пересчитан рейтинг Title."""
-    instance.title.rating = instance.title.reviews.aggregate(
-        models.Avg('score'))['score__avg']
-    instance.title.save()
-'''
 
 
 class Comment(BaseModelReviw):
