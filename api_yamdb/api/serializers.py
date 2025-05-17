@@ -48,7 +48,7 @@ class TitleSerializer(serializers.ModelSerializer):
         ]
 
     def to_representation(self, instance):
-        """Дополняет представление данными о жанре и категории."""
+        """Дополняет представление данными о жанре, категории и рейтинге."""
 
         serialized_data = super().to_representation(instance)
         serialized_data['genre'] = (
@@ -57,20 +57,14 @@ class TitleSerializer(serializers.ModelSerializer):
         serialized_data['category'] = (
             CategorySerializer(instance.category).data
         )
-        serialized_data['rating'] = self.get_rating(instance)
+        serialized_data['rating'] = instance.rating
         return serialized_data
-
+    
     def validate_year(self, year):
         '''Валидация поля год.'''
 
-        if not (year <= dt.datetime.today().year):
-            raise serializers.ValidationError('Проверьте год произведения.')
+        if year > dt.datetime.today().year:
+            raise serializers.ValidationError(
+                'Год произведения не может быть больше текущего года.'
+            )
         return year
-
-    def get_rating(self, title):
-        '''Подсчет рейтинга произведения.'''
-
-        if title.reviews.count() == 0:
-            return None
-        rating = Review.objects.filter(title=title).aggregate(rating=Avg('score'))
-        return rating['rating']
