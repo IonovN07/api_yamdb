@@ -3,13 +3,19 @@ from reviews.models import Title
 
 
 class TitleFilter(filters.FilterSet):
-    '''Фильтры произведений.'''
+    '''Фильтры для произведений.'''
     
-    genre = filters.CharFilter(field_name='genre__slug')
-    category = filters.CharFilter(field_name='category__slug')
-    name = filters.CharFilter(field_name='name', lookup_expr='icontains')
+    def create_char_filter(field_name):
+        return filters.CharFilter(
+            field_name=field_name,
+            lookup_expr='icontains'
+        )
+
+    category = create_char_filter('category__slug')
+    genre = create_char_filter('genre__slug')
+    name = create_char_filter('name')
     year = filters.NumberFilter(field_name='year')
 
     class Meta:
         model = Title
-        fields = ('genre', 'category', 'name', 'year')
+        fields = '__all__'
