@@ -75,6 +75,7 @@ class Title(models.Model):
     def __str__(self):
         return self.name
 
+
 class TitleGenre(models.Model):
 
     title = models.ForeignKey(Title, on_delete=models.CASCADE,)

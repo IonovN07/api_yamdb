@@ -1,13 +1,18 @@
 from rest_framework import filters, mixins, viewsets
 
 from review.models import Category, Genre, Title
+from api.serializers import (
+    CategorySerializer,
+    GenreSerializer,
+    TitleSerializer,
+)
 
 
 class TitleVievSet(viewsets.ModelViewSet):
     pass
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(ListCreateDestroyViewSet):
     pass
 
-class TitleVievSet(viewsets.ModelViewSet):
+class GenreViewSet(ListCreateDestroyViewSet):
     pass
