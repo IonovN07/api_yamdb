@@ -1,4 +1,10 @@
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
+
+from api_yamdb.settings import LENGTH_STR
+from users.models import User
 
 
 class Category(models.Model):
@@ -8,7 +14,7 @@ class Category(models.Model):
         max_length=256,
         verbose_name='Название',
         help_text='Название категории, не более 256 символов'
-        )
+    )
     slug = models.SlugField(unique=True, verbose_name='Слаг')
 
     class Meta:
@@ -27,7 +33,7 @@ class Genre(models.Model):
         max_length=256,
         verbose_name='Название',
         help_text='Название жанра, не более 256 символов'
-        )
+    )
     slug = models.SlugField(unique=True, verbose_name='Слаг')
 
     class Meta:
@@ -60,7 +66,7 @@ class Title(models.Model):
         null=True,
         verbose_name='Категория',
     )
-    genres = models.ManyToManyField(
+    genre = models.ManyToManyField(
         'Genre',
         through='TitleGenre',
         verbose_name='Жанр'
@@ -83,3 +89,86 @@ class TitleGenre(models.Model):
 
     def __str__(self):
         return f'{self.title},{self.genre}'
+
+
+class BaseModelReviw(models.Model):
+    """Абстрактная модель для соблюдения DRY."""
+
+    text = models.TextField(
+        'Текст записи', max_length=500, help_text='Поле для новой записи'
+    )
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+
+class Review(BaseModelReviw):
+    """Модель для управления отзывами произведений."""
+
+    title = models.ForeignKey(
+        Title,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+        verbose_name='Произведение',
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+        verbose_name='Автор',
+    )
+    score = models.IntegerField(
+        verbose_name='Оценка',
+        help_text='Ваша оценка данному произведению от 1 до 10 (целое число)',
+        validators=(MinValueValidator(1), MaxValueValidator(10),))
+
+    class Meta:
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+        constraints = (
+            models.UniqueConstraint(
+                fields=['title', 'author'],
+                name='reviews_unique',
+            ),
+        )
+
+    def __str__(self):
+        """Метод для возврата названия объекта."""
+        return self.text[:LENGTH_STR]
+
+
+'''
+@receiver([post_delete, post_save], sender=Review)
+def title_rating_change(sender, instance, using, **kwargs):
+    """Каждый раз при создании, изменении или удалении отзыва
+       будет пересчитан рейтинг Title."""
+    instance.title.rating = instance.title.reviews.aggregate(
+        models.Avg('score'))['score__avg']
+    instance.title.save()
+'''
+
+
+class Comment(BaseModelReviw):
+    """Модель для управления комментариями к отзывам."""
+
+    review = models.ForeignKey(
+        Review,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Отзыв',
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Автор',
+    )
+
+    class Meta:
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+
+    def __str__(self):
+        """Метод для возврата названия объекта."""
+        return self.text[:LENGTH_STR]
