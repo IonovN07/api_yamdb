@@ -114,10 +114,11 @@ class UserViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_permissions(self):
-        return [permission() for permission in (
-            [IsAuthenticated] if self.action == 'me'
-            else self.permission_classes
-        )]
+        if self.request.user.is_authenticated and (
+                self.action == 'me' or self.request.path.endswith('/users/me/')
+        ):
+            return [IsAuthenticated()]
+        return [permission() for permission in self.permission_classes]
 
     def put(self, request, *args, **kwargs):
         return Response(
