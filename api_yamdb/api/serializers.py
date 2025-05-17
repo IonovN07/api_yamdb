@@ -1,7 +1,6 @@
 import datetime as dt
 
 from django.shortcuts import get_object_or_404
-from django.db.models import Avg
 from rest_framework import serializers
 
 from reviews.models import Category, Genre, Title, Review, Comment
@@ -21,66 +20,12 @@ class GenreSerializer(serializers.ModelSerializer):
         fields = ('name', 'slug')
 
 
-class TitleSerializer(serializers.ModelSerializer):
-
-    category = serializers.SlugRelatedField(
-        slug_field='slug',
-        queryset=Category.objects.all(),
-    )
-    genre = serializers.SlugRelatedField(
-        slug_field='slug',
-        queryset=Genre.objects.all(),
-        source='genres',
-        many=True,
-        required=True,
-
-    )
-
-    class Meta:
-        model = Title
-        fields = [
-            'id',
-            'name',
-            'year',
-            'rating',
-            'description',
-            'genre',
-            'category',
-        ]
-
-    def to_representation(self, instance):
-        """Дополняет представление данными о жанре и категории."""
-
-        serialized_data = super().to_representation(instance)
-        serialized_data['genre'] = (
-            GenreSerializer(instance.genres.all(), many=True).data
-        )
-        serialized_data['category'] = (
-            CategorySerializer(instance.category).data
-        )
-        serialized_data['rating'] = self.get_rating(instance)
-        return serialized_data
-
-    def validate_year(self, year):
-        '''Валидация поля год.'''
-
-        if not (year <= dt.datetime.today().year):
-            raise serializers.ValidationError('Проверьте год произведения.')
-        return year
-
-    def get_rating(self, title):
-        '''Подсчет рейтинга произведения.'''
-
-        if title.reviews.count() == 0:
-            return None
-        rating = Review.objects.filter(
-            title=title).aggregate(rating=Avg('score'))
-        return rating['rating']
-
-
 class TitleReadSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
-    genre = GenreSerializer(read_only=True, many=True)
+    genre = GenreSerializer(
+        read_only=True,
+        many=True
+    )
     rating = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -102,6 +47,15 @@ class TitleWriteSerializer(serializers.ModelSerializer):
     class Meta:
         fields = '__all__'
         model = Title
+
+    def validate_year(self, year):
+        '''Валидация поля год.'''
+
+        if year > dt.datetime.today().year:
+            raise serializers.ValidationError(
+                'Год произведения не может быть больше текущего года.'
+            )
+        return year
 
 
 class ReviewSerializer(serializers.ModelSerializer):

@@ -105,7 +105,7 @@ class UserViewSet(viewsets.ModelViewSet):
     Работа с пользователями. Доступ только администраторам.
     Эндпоинт `/users/me/` доступен любому аутентифицированному.
     """
-    queryset = User.objects.all()
+    queryset = User.objects.all().order_by('username')
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
     lookup_field = 'username'

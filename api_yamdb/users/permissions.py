@@ -1,5 +1,7 @@
 """
-from users.permissions import IsAdmin, IsAdminOrReadOnly, IsAuthorModeratorAdminOrReadOnly
+from users.permissions import (
+    IsAdmin, IsAdminOrReadOnly, IsAuthorModeratorAdminOrReadOnly
+)
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 
 Выбирайте нужный класс:
@@ -69,4 +71,3 @@ class IsAuthorModeratorAdminOrReadOnly(permissions.BasePermission):
             or request.user.is_moderator
             or request.user.is_admin
         )
-

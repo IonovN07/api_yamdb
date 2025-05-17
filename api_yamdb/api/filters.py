@@ -3,6 +3,8 @@ from reviews.models import Title
 
 
 class TitleFilter(filters.FilterSet):
+    '''Фильтры для произведений.'''
+
     def create_char_filter(field_name):
         return filters.CharFilter(
             field_name=field_name,
