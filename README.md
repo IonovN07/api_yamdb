@@ -60,12 +60,6 @@ pip install -r requirements.txt
 python3 manage.py migrate
 ```
 
-Загрузите данные (по желанию):
-
-```bash
-python3 manage.py base_import
-```
-
 Запустите сервер:
 
 ```bash
