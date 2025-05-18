@@ -80,14 +80,33 @@ python3 manage.py runserver
 http://127.0.0.1:8000/redoc/
 ```
 
-## Тестирование:
+## Импорт данных:
 
-Команда для импорта данных:
+###  Импорт с путем по умолчанию:
 
 ```bash
-python3 manage.py import_db
+  python manage.py import_db
+```  
+
+### Импорт с указанием кастомного пути:
+
+```bash
+  python manage.py import_db --path my_data/csv_files/
 ```
-Тесты: 
+
+### Очистка данных перед импортом:
+
+```bash
+  python manage.py import_db --clear
+```
+
+### Комбинация параметров:
+
+```bash
+python manage.py import_db --path alternative_data/ --clear
+```
+
+## Тестирование: 
 
 ```bash
 pytest
