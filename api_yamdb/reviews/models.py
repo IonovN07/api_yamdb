@@ -1,5 +1,6 @@
-from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.utils import timezone
 
 from api_yamdb.settings import LENGTH_STR
 from users.models import User
@@ -55,7 +56,7 @@ class Title(models.Model):
     )
     year = models.SmallIntegerField(
         verbose_name='Год',
-        # Возможно необходима валидация на уровне модели
+        validators=[MaxValueValidator(timezone.now().year)],
     )
     description = models.TextField(blank=True, verbose_name='Описание')
     category = models.ForeignKey(
@@ -77,10 +78,11 @@ class Title(models.Model):
         default_related_name = 'titles'
 
     def __str__(self):
-        return self.name
+        return self.name[:21]
 
 
 class TitleGenre(models.Model):
+    """Таблица связывающая произведения с жанром."""
 
     title = models.ForeignKey(Title, on_delete=models.CASCADE,)
     genre = models.ForeignKey(Genre, on_delete=models.CASCADE,)

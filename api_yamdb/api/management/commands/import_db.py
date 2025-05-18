@@ -15,7 +15,7 @@ class Command(BaseCommand):
     """Команда для импорта данных из CSV файлов в базу данных."""
 
     help = 'Загрузка данных из csv'
-    DEFAULT_CSV_PATH = 'static/data/'  # Путь по умолчанию
+    DEFAULT_CSV_PATH = 'static/data/'
 
     def add_arguments(self, parser):
         """Определение аргументов команды."""
@@ -35,7 +35,6 @@ class Command(BaseCommand):
         """Основной метод выполнения команды."""
         self.csv_path = options['path']
 
-        # Проверяем существование директории
         if not os.path.exists(self.csv_path):
             self.stdout.write(
                 self.style.ERROR(

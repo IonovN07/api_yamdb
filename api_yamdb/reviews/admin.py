@@ -13,35 +13,31 @@ class TitleAdmin(admin.ModelAdmin):
         'description'
     )
     list_display_links = ('name',)
-#    list_editable = ('category', 'genre')
-#    list_filter = ('category', 'genre')
-#    filter_horizontal = ('genre',)
+    list_editable = ('category', 'genre')
+    list_filter = ('category', 'genre')
+    filter_horizontal = ('genre',)
     search_fields = ('name',)
 
 
-# class TitleInline(admin.StackedInline):
-#    model = Title
-#    extra = 0
+class TitleInline(admin.StackedInline):
+    model = Title
+    extra = 0
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    '''
     inlines = (
         TitleInline,
     )
-    '''
     list_display = ('name', 'slug')
     list_display_links = ('name',)
 
 
 @admin.register(Genre)
 class GenreAdmin(admin.ModelAdmin):
-    '''
     inlines = (
         TitleInline,
     )
-    '''
     list_display = ('name', 'slug')
     list_display_links = ('name',)
 

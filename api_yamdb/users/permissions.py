@@ -1,30 +1,3 @@
-"""
-from users.permissions import (
-    IsAdmin, IsAdminOrReadOnly, IsAuthorModeratorAdminOrReadOnly
-)
-from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
-
-Выбирайте нужный класс:
-
-Только для администратора:
-    permission_classes = [IsAdmin]
-
-Чтение — всем, изменения — только админу:
-    permission_classes = [IsAdminOrReadOnly]
-
-Чтение — всем. Изменение — автору, модератору или админу:
-    permission_classes = [IsAuthorModeratorAdminOrReadOnly]
-
-Открытый доступ для анонимов:
-    permission_classes = [AllowAny]
-
-
-- Всегда прописывать permission_classes явно
-- Если используется проверка автора — у модели должно быть поле `author`
-- Если не указать permission_classes — сработает DEFAULT_PERMISSION_CLASSES из settings.py:
-    'rest_framework.permissions.IsAuthenticatedOrReadOnly'
-"""
-
 from rest_framework import permissions
 
 
