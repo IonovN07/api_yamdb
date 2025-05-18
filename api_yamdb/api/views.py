@@ -1,6 +1,6 @@
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
+from rest_framework import permissions, viewsets
 from rest_framework.pagination import (
     PageNumberPagination, LimitOffsetPagination
 )
@@ -12,7 +12,7 @@ from api.serializers import (
     CategorySerializer,
     GenreSerializer,
     CommentSerializer,
-    TitleReadSerializer,
+    TitleViewSerializer,
     TitleWriteSerializer,
     ReviewSerializer,
 )
@@ -26,20 +26,15 @@ from users.permissions import (
 class TitleViewSet(AllowedMethodsMixin, viewsets.ModelViewSet):
     """Получить список всех произведений."""
 
+    queryset = Title.objects.annotate(rating=Avg("reviews__score"))
     pagination_class = LimitOffsetPagination
     permission_classes = (IsAdminOrReadOnly,)
-    filter_backends = (DjangoFilterBackend, )
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
 
-    def get_queryset(self):
-        return (
-            Title.objects.annotate(rating=Avg('reviews__score'))
-            .all().order_by('-year')
-        )
-
     def get_serializer_class(self):
-        if self.action in ('list', 'retrieve'):
-            return TitleReadSerializer
+        if self.request.method in permissions.SAFE_METHODS:
+            return TitleViewSerializer
         return TitleWriteSerializer
 
 
