@@ -1,6 +1,6 @@
 from django.db.models import Avg
-from django.shortcuts import get_object_or_404
 from django.http import Http404
+from django.shortcuts import get_object_or_404
 from rest_framework import permissions, viewsets, status
 from rest_framework.pagination import (
     PageNumberPagination, LimitOffsetPagination
@@ -78,7 +78,10 @@ class CommentViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        """Получение комментариев с проверкой принадлежности отзыва к произведению."""
+        """
+        Получение комментариев с проверкой принадлежности
+        отзыва к произведению.
+        """
         title = get_object_or_404(Title, id=self.kwargs['title_id'])
         review = get_object_or_404(
             Review,
@@ -89,18 +92,19 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Создание комментария с проверкой принадлежности отзыва."""
+
         title = get_object_or_404(Title, id=self.kwargs['title_id'])
         review = get_object_or_404(
             Review,
             id=self.kwargs['review_id'],
-            title=title  # Проверка связи отзыва с произведением
+            title=title
         )
         serializer.save(author=self.request.user, review=review)
 
     def create(self, request, *args, **kwargs):
         """Обработка создания комментария с валидацией."""
+
         try:
-            # Проверка принадлежности выполняется в perform_create
             return super().create(request, *args, **kwargs)
         except ValidationError as e:
             if 'empty_comment' in e.get_codes().get('text', []):
@@ -112,7 +116,10 @@ class CommentViewSet(viewsets.ModelViewSet):
         except Exception as e:
             if isinstance(e, Http404):
                 return Response(
-                    {"detail": "Отзыв не найден или не принадлежит указанному произведению."},
+                    {
+                        "detail": "Отзыв не найден "
+                        "или не принадлежит указанному произведению."
+                    },
                     status=status.HTTP_404_NOT_FOUND
                 )
             raise
