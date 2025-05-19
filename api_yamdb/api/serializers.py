@@ -1,7 +1,7 @@
 import datetime as dt
 
 from django.shortcuts import get_object_or_404
-from rest_framework import serializers
+from rest_framework import serializers, status
 
 from reviews.models import Category, Genre, Title, Review, Comment
 
@@ -110,19 +110,30 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only=True,
         slug_field='username'
     )
+    text = serializers.CharField(required=True, min_length=1)
 
     class Meta:
         model = Comment
-        fields = (
-            'id',
-            'text',
-            'author',
-            'pub_date'
-        )
+        fields = ('id', 'text', 'author', 'pub_date')
         read_only_fields = ('review',)
 
+    def validate_text(self, value):
+        """Проверка, что текст комментария не пустой."""
+        if not value.strip():
+            raise serializers.ValidationError(
+                "Текст комментария не может быть пустым.",
+                code='empty_comment'
+            )
+        return value
+
     def create(self, validated_data):
-        validated_data['author'] = self.context['request'].user
+        """Создание комментария с проверкой существования отзыва."""
         review_id = self.context['view'].kwargs['review_id']
-        validated_data['review'] = get_object_or_404(Review, id=review_id)
+        try:
+            review = Review.objects.get(id=review_id)
+        except Review.DoesNotExist:
+            raise NotFound(detail="Отзыв не найден")
+        
+        validated_data['author'] = self.context['request'].user
+        validated_data['review'] = review
         return super().create(validated_data)

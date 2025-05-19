@@ -1,10 +1,13 @@
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, viewsets
+from django.http import Http404
+from rest_framework import permissions, viewsets, status
 from rest_framework.pagination import (
     PageNumberPagination, LimitOffsetPagination
 )
+from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.exceptions import ValidationError
 
 from api.filters import TitleFilter
 from api.mixins import AllowedMethodsMixin, ListCreateDestroyViewSet
@@ -69,14 +72,47 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     """Получить список всех комментариев."""
-
     serializer_class = CommentSerializer
     permission_classes = (IsAuthorModeratorAdminOrReadOnly,)
     http_method_names = ['get', 'post', 'patch', 'delete']
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        """Получение всех комментов к отзыву."""
-
-        review = get_object_or_404(Review, id=self.kwargs['review_id'])
+        """Получение комментариев с проверкой принадлежности отзыва к произведению."""
+        title = get_object_or_404(Title, id=self.kwargs['title_id'])
+        review = get_object_or_404(
+            Review,
+            id=self.kwargs['review_id'],
+            title=title  # Проверка что отзыв принадлежит произведению
+        )
         return review.comments.all().order_by('-id')
+
+    def perform_create(self, serializer):
+        """Создание комментария с проверкой принадлежности отзыва."""
+        title = get_object_or_404(Title, id=self.kwargs['title_id'])
+        review = get_object_or_404(
+            Review,
+            id=self.kwargs['review_id'],
+            title=title  # Проверка связи отзыва с произведением
+        )
+        serializer.save(author=self.request.user, review=review)
+
+    def create(self, request, *args, **kwargs):
+        """Обработка создания комментария с валидацией."""
+        try:
+            # Проверка принадлежности выполняется в perform_create
+            return super().create(request, *args, **kwargs)
+        except ValidationError as e:
+            if 'empty_comment' in e.get_codes().get('text', []):
+                return Response(
+                    {"text": ["Текст комментария не может быть пустым."]},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            raise
+        except Exception as e:
+            if isinstance(e, Http404):
+                return Response(
+                    {"detail": "Отзыв не найден или не принадлежит указанному произведению."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            raise
