@@ -19,6 +19,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         """Определение аргументов команды."""
+
         parser.add_argument(
             '--path',
             type=str,
@@ -33,6 +34,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Основной метод выполнения команды."""
+
         self.csv_path = options['path']
 
         if not os.path.exists(self.csv_path):
@@ -69,6 +71,7 @@ class Command(BaseCommand):
 
     def clear_data(self):
         """Очистка существующих данных перед импортом."""
+
         self.stdout.write(self.style.WARNING('Очистка базы...'))
         Comment.objects.all().delete()
         Review.objects.all().delete()
@@ -81,10 +84,12 @@ class Command(BaseCommand):
 
     def get_csv_path(self, filename):
         """Возвращает полный путь к CSV-файлу."""
+
         return os.path.join(self.csv_path, filename)
 
     def import_users(self):
         """Импорт пользователей из CSV."""
+
         with open(self.get_csv_path('users.csv'),
                   mode='r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
@@ -95,13 +100,14 @@ class Command(BaseCommand):
                         'username': row['username'],
                         'email': row['email'],
                         'role': row['role'],
-                        'bio': row['bio'] if row['bio'] else None,
+                        'bio': row['bio'] if row['bio'] else "",
                     }
                 )
         self.stdout.write(self.style.SUCCESS('Пользователи успешно загружены'))
 
     def import_categories(self):
         """Импорт категорий из CSV."""
+
         with open(self.get_csv_path('category.csv'),
                   mode='r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
@@ -118,6 +124,7 @@ class Command(BaseCommand):
 
     def import_genres(self):
         """Импорт жанров из CSV."""
+
         with open(self.get_csv_path('genre.csv'),
                   mode='r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
@@ -133,6 +140,7 @@ class Command(BaseCommand):
 
     def import_titles(self):
         """Импорт произведений из CSV."""
+
         with open(self.get_csv_path('titles.csv'),
                   mode='r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
@@ -151,6 +159,7 @@ class Command(BaseCommand):
 
     def import_genre_title(self):
         """Импорт связей жанров и произведений из CSV."""
+
         with open(self.get_csv_path('genre_title.csv'),
                   mode='r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
@@ -170,6 +179,7 @@ class Command(BaseCommand):
 
     def import_reviews(self):
         """Импорт отзывов из CSV."""
+
         with open(self.get_csv_path('review.csv'),
                   mode='r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
@@ -194,6 +204,7 @@ class Command(BaseCommand):
 
     def import_comments(self):
         """Импорт комментариев из CSV."""
+
         with open(self.get_csv_path('comments.csv'),
                   mode='r', encoding='utf-8') as file:
             reader = csv.DictReader(file)

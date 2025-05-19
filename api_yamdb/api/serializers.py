@@ -1,7 +1,8 @@
 import datetime as dt
 
 from django.shortcuts import get_object_or_404
-from rest_framework import serializers, status
+from rest_framework import serializers
+from rest_framework.exceptions import NotFound
 
 from reviews.models import Category, Genre, Title, Review, Comment
 
@@ -133,7 +134,7 @@ class CommentSerializer(serializers.ModelSerializer):
             review = Review.objects.get(id=review_id)
         except Review.DoesNotExist:
             raise NotFound(detail="Отзыв не найден")
-        
+
         validated_data['author'] = self.context['request'].user
         validated_data['review'] = review
         return super().create(validated_data)
