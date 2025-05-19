@@ -2,7 +2,6 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'p&l%385148kslhtyn^##a1)ilz@4zqj=rq&agdol^##zgl9(vs'
@@ -10,7 +9,6 @@ SECRET_KEY = 'p&l%385148kslhtyn^##a1)ilz@4zqj=rq&agdol^##zgl9(vs'
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -58,7 +56,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'api_yamdb.wsgi.application'
 
-
 # Database
 
 DATABASES = {
@@ -67,7 +64,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 
@@ -85,7 +81,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 # Internationalization
 
@@ -126,3 +121,11 @@ SIMPLE_JWT = {
 }
 
 LENGTH_STR: int = 15
+
+USERNAME_MAX_LENGTH = 150
+EMAIL_MAX_LENGTH = 254
+NAME_MAX_LENGTH = 150
+CONFIRMATION_CODE_LENGTH = 6
+RESERVED_NAME = 'me'
+DEFAULT_FROM_EMAIL = 'noreply@yamdb.fake'
+USERNAME_REGEX = r'^[\w.@+-]+\Z'
