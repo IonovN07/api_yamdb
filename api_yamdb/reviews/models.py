@@ -7,11 +7,11 @@ from api_yamdb.settings import LENGTH_STR
 # from users.models import User
 
 
-UUSER = 'user'
+USER = 'user'
 MODERATOR = 'moderator'
 ADMIN = 'admin'
 ROLE_CHOICES = [
-    (UUSER, 'user'),
+    (USER, 'user'),
     (MODERATOR, 'moderator'),
     (ADMIN, 'admin')
 ]
@@ -23,7 +23,7 @@ class User(AbstractUser):
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
-        default=UUSER
+        default=USER
     )
     confirmation_code = models.CharField(
         max_length=255,
