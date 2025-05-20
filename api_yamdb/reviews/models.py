@@ -5,7 +5,6 @@ from django.db import models
 from django.utils import timezone
 
 from api_yamdb.settings import LENGTH_STR
-# from users.models import User
 
 
 USER = 'user'
@@ -18,6 +17,14 @@ ROLE_CHOICES = [
 ]
 
 ROLE_MAX_LENGTH = max(len(role) for role, _ in ROLE_CHOICES)
+
+def current_year():
+    return timezone.now().year
+
+class DynamicMaxValueValidator(MaxValueValidator):
+    def __call__(self, value):
+        self.limit_value = current_year()
+        super().__call__(value)
 
 
 class User(AbstractUser):
@@ -59,42 +66,40 @@ class User(AbstractUser):
         return self.role == MODERATOR
 
 
-class Category(models.Model):
-    """Данная модель описывает таблицу с категориями произведений."""
+class BaseModel(models.Model):
+    """Базовый класс для моделей с общими свойствами."""
 
     name = models.CharField(
         max_length=256,
         verbose_name='Название',
-        help_text='Название категории, не более 256 символов'
+        help_text=''
     )
     slug = models.SlugField(unique=True, verbose_name='Слаг')
 
     class Meta:
-        ordering = ['name']
+        ordering = ['__str__']
+        abstract = True
+
+    def __str__(self):
+        return self.name[:21]
+
+class Category(BaseModel):
+    """Данная модель описывает таблицу с категориями произведений."""
+
+    class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
-    def __str__(self):
-        return self.name[:21]
+    help_text = 'Название категории, не более 256 символов'
 
-
-class Genre(models.Model):
-    """ Данная модель описывает таблицу с жанрами произведений."""
-
-    name = models.CharField(
-        max_length=256,
-        verbose_name='Название',
-        help_text='Название жанра, не более 256 символов'
-    )
-    slug = models.SlugField(unique=True, verbose_name='Слаг')
+class Genre(BaseModel):
+    """Данная модель описывает таблицу с жанрами произведений."""
 
     class Meta:
-        ordering = ['name']
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
-    def __str__(self):
-        return self.name[:21]
+    help_text = 'Название жанра, не более 256 символов'
 
 
 class Title(models.Model):
@@ -109,28 +114,29 @@ class Title(models.Model):
     )
     year = models.SmallIntegerField(
         verbose_name='Год',
-        validators=[MaxValueValidator(timezone.now().year)],
+        validators=[DynamicMaxValueValidator(current_year())],
     )
     description = models.TextField(blank=True, verbose_name='Описание')
     category = models.ForeignKey(
-        'Category',
+        Category,
         on_delete=models.SET_NULL,
         null=True,
         verbose_name='Категория',
     )
     genre = models.ManyToManyField(
-        'Genre',
+        Genre,
         verbose_name='Жанр'
     )
 
     class Meta:
-        ordering = ('-year',)
+        ordering = ('name',)
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
         default_related_name = 'titles'
 
     def __str__(self):
-        return self.name[:21]
+        return (f'{self.name[:21]} {self.year[:21]} '
+                f'{self.category.name[:21]}')
 
 
 class BaseModelReviw(models.Model):

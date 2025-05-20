@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from api.filters import TitleFilter
-from api.mixins import AllowedMethodsMixin, ListCreateDestroyViewSet
+# from api.mixins import ListCreateDestroyViewSet
 from api.serializers import (
     CategorySerializer,
     GenreSerializer,
@@ -67,7 +67,6 @@ def send_confirmation_email(user, confirmation_code):
     msg.attach_alternative(html_content, "text/html")
     msg.send()
 
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
@@ -106,7 +105,6 @@ def signup(request):
 
     send_confirmation_email(user, confirmation_code)
     return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -156,12 +154,15 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class TitleViewSet(AllowedMethodsMixin, viewsets.ModelViewSet):
+class TitleViewSet(viewsets.ModelViewSet):
     """Получить список всех произведений."""
 
-    queryset = Title.objects.annotate(rating=Avg("reviews__score"))
+    queryset = ( 
+        Title.objects.annotate(rating=Avg("reviews__score")).order_by('name')
+    )
     pagination_class = LimitOffsetPagination
     permission_classes = (IsAdminOrReadOnly,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
 
@@ -171,14 +172,26 @@ class TitleViewSet(AllowedMethodsMixin, viewsets.ModelViewSet):
         return TitleWriteSerializer
 
 
-class CategoryViewSet(ListCreateDestroyViewSet):
+class BaseCategoryGenreViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    filter_backends = (SearchFilter,)
+    search_fields = ('name',)
+    permission_classes = (IsAdminOrReadOnly,)
+    lookup_field = 'slug'
+
+
+class CategoryViewSet(BaseCategoryGenreViewSet):
     """Получить список всех категорий."""
 
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(ListCreateDestroyViewSet):
+class GenreViewSet(BaseCategoryGenreViewSet):
     """Получить список всех жанров."""
 
     queryset = Genre.objects.all()

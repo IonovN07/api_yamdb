@@ -114,10 +114,17 @@ class TitleViewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = (
-            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+        all_fields = (
+            'id',
+            'name',
+            'year',
+            'rating',
+            'description',
+            'genre',
+            'category'
         )
-
+        fields = all_fields
+        read_only_fields = all_fields
 
 class TitleWriteSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
@@ -146,16 +153,15 @@ class TitleWriteSerializer(serializers.ModelSerializer):
             )
         return year
 
-    def validate_genre(self, genre):
-        if not genre:
-            raise serializers.ValidationError(
-                "Жанр произведения не может быть пустым"
-            )
-        return genre
+    # def validate_genre(self, genre):
+    #     if not genre:
+    #         raise serializers.ValidationError(
+    #             "Жанр произведения не может быть пустым"
+    #         )
+    #     return genre
 
     def to_representation(self, instance):
-        representation = TitleViewSerializer(instance).data
-        return representation
+        return TitleViewSerializer(instance).data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
