@@ -5,6 +5,7 @@ class IsAdmin(permissions.BasePermission):
     """
     Доступ только для админов (роль 'admin' или superuser).
     """
+
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
@@ -12,17 +13,15 @@ class IsAdmin(permissions.BasePermission):
         )
 
 
-class IsAdminOrReadOnly(permissions.BasePermission):
+class IsAdminOrReadOnly(IsAdmin):
     """
     Чтение — всем, изменения — только админам.
     """
+
     def has_permission(self, request, view):
         return (
             request.method in permissions.SAFE_METHODS
-            or (
-                request.user.is_authenticated
-                and request.user.is_admin
-            )
+            or super().has_permission(request, view)
         )
 
 
@@ -31,6 +30,7 @@ class IsAuthorModeratorAdminOrReadOnly(permissions.BasePermission):
     Чтение — всем.
     Изменение/удаление — автору объекта, модератору или админу.
     """
+
     def has_permission(self, request, view):
         return (
             request.method in permissions.SAFE_METHODS
