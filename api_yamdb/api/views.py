@@ -1,18 +1,19 @@
-from django.contrib.auth.tokens import default_token_generator
+import random
+
+from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.db.models import Avg
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, permissions, viewsets 
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import (
     PageNumberPagination, LimitOffsetPagination
 )
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 
 from api.filters import TitleFilter
@@ -37,98 +38,100 @@ from api.permissions import (
 )
 
 
-class SignUpView(APIView):
-    """
-    Регистрация пользователя и отправка кода подтверждения.
-    """
-    permission_classes = [AllowAny]
+def generate_confirmation_code():
+    return ''.join(str(random.randint(0, 9)) for _ in
+                   range(settings.CONFIRMATION_CODE_LENGTH))
 
-    def post(self, request):
-        serializer = SignUpSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+def send_confirmation_email(user, confirmation_code):
+    subject = 'Код подтверждения YaMDb!'
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yamdb.fake')
+    to = [user.email]
 
-        username = serializer.validated_data["username"]
-        email = serializer.validated_data["email"]
+    text_content = (
+        f'Здравствуйте, {user.username}!\n\n'
+        f'Ваш код подтверждения:\n\n{confirmation_code}\n\n'
+        'Используйте этот код для получения токена.'
+    )
+    html_content = f'''
+        <html>
+            <body>
+                <p>Здравствуйте, <strong>{user.username}</strong>!</p>
+                <p>Ваш код подтверждения:</p>
+                <p><code style="font-size: 1.2em;">{confirmation_code}</code></p>
+                <p>Используйте этот код для получения токена.</p>
+            </body>
+        </html>
+    '''
 
-        user = User.objects.filter(username=username).first()
-        email_owner = User.objects.filter(email=email).first()
-
-        if not user:
-            if email_owner:
-                raise ValidationError({
-                    "email": [
-                        "Этот email уже используется другим пользователем."]
-                })
-            user = User.objects.create(username=username, email=email)
-        else:
-            if email_owner and user != email_owner:
-                raise ValidationError({
-                    "username": ["Это имя уже занято другим пользователем."],
-                    "email": ["Этот email не соответствует данному имени."]
-                })
-            if not email_owner:
-                raise ValidationError({
-                    "username": ["Это имя уже занято другим пользователем."]
-                })
-
-        user.confirmation_code = default_token_generator.make_token(user)
-        user.save()
-        self.send_confirmation_email(user, user.confirmation_code)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def send_confirmation_email(self, user, confirmation_code):
-        subject = 'Код подтверждения YaMDb!'
-        from_email = 'noreply@yamdb.fake'
-        to = [user.email]
-
-        text_content = (
-            f'Здравствуйте, {user.username}!\n\n'
-            f'Ваша роль в системе: {user.role}\n'
-            'Ваш код подтверждения:\n\n'
-            f'{confirmation_code}\n\n'
-            'Используйте этот код для получения токена.'
-        )
-        html_content = f'''
-            <html>
-                <body>
-                    <p>Здравствуйте, <strong>{user.username}</strong>!</p>
-                    <p>Ваша роль в системе: <strong>{user.role}</strong></p>
-                    <p>Ваш код подтверждения:</p>
-                    <p><code style="font-size: 1.2em;">
-                    {confirmation_code}</code></p>
-                    <p>Используйте этот код для получения токена.</p>
-                </body>
-            </html>
-        '''
-
-        msg = EmailMultiAlternatives(subject, text_content, from_email, to)
-        msg.attach_alternative(html_content, "text/html")
-        msg.send()
+    msg = EmailMultiAlternatives(subject, text_content, from_email, to)
+    msg.attach_alternative(html_content, "text/html")
+    msg.send()
 
 
-class GetTokenView(APIView):
-    """
-        Получение токена с помощью confirmation_code.
-    """
-    permission_classes = [AllowAny]
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def signup(request):
+    serializer = SignUpSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
 
-    def post(self, request):
-        serializer = TokenSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    username = serializer.validated_data['username']
+    email = serializer.validated_data['email']
 
-        user = serializer.validated_data['user']
-        token = AccessToken.for_user(user)
+    existing_users = list(
+        User.objects.filter(username=username) | User.objects.filter(
+            email=email))
 
-        return Response({'token': str(token)}, status=status.HTTP_200_OK)
+    if not existing_users:
+        user = User.objects.create(username=username, email=email)
+    elif len(existing_users) == 1:
+        user = existing_users[0]
+        if user.username != username or user.email != email:
+            errors = {}
+            if user.username == username:
+                errors['username'] = [
+                    'Это имя уже занято другим пользователем.']
+            if user.email == email:
+                errors['email'] = [
+                    'Этот email не соответствует данному имени.']
+            raise ValidationError(errors)   
+    else:
+        raise ValidationError({
+            'username': ['Это имя уже занято другим пользователем.'],
+            'email': ['Этот email уже используется другим пользователем.']
+        })
+
+    confirmation_code = generate_confirmation_code()
+    user.confirmation_code = confirmation_code
+    user.save()
+
+    send_confirmation_email(user, confirmation_code)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def get_token(request):
+    serializer = TokenSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    username = serializer.validated_data['username']
+    code = serializer.validated_data['confirmation_code']
+
+    user = get_object_or_404(User, username=username)
+
+    if user.confirmation_code != code:
+        raise ValidationError('Неверный код подтверждения.')
+
+    user.confirmation_code = ''
+    user.save()
+
+    token = AccessToken.for_user(user)
+    return Response({'token': str(token)}, status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """
-    Работа с пользователями. Доступ только администраторам.
-    Эндпоинт `/users/me/` доступен любому аутентифицированному.
-    """
-    queryset = User.objects.all().order_by('username')
+    
+    queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
     lookup_field = 'username'
@@ -136,30 +139,17 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ['username']
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
-    def get_permissions(self):
-        if self.request.user.is_authenticated and (
-                self.action == 'me' or self.request.path.endswith('/users/me/')
-        ):
-            return [IsAuthenticated()]
-        return [permission() for permission in self.permission_classes]
-
-    def put(self, request, *args, **kwargs):
-        return Response(
-            {"detail": "Метод PUT запрещён."},
-            status=status.HTTP_405_METHOD_NOT_ALLOWED
-        )
-
-    @action(detail=False, methods=['get', 'patch'], url_path='me')
+    @action(detail=False, methods=['get', 'patch'],
+            url_path=settings.RESERVED_NAME,
+            permission_classes=[IsAuthenticated])
     def me(self, request):
         if request.method == 'GET':
-            serializer = UserProfileSerializer(request.user)
-            return Response(serializer.data)
+            return Response(UserProfileSerializer(request.user).data)
 
         serializer = UserProfileSerializer(
             request.user,
             data=request.data,
             partial=True,
-            context={'instance': request.user}
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()

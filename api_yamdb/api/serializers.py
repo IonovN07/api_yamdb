@@ -1,5 +1,6 @@
 import datetime as dt
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
@@ -10,103 +11,83 @@ from reviews.models import Category, Genre, Title, Review, Comment
 User = get_user_model()
 
 
-def validate_reserved_username(value):
-    if value.lower() == 'me':
-        raise serializers.ValidationError("Имя 'me' не разрешено.")
-    return value
+def validate_reserved_username(username: str):
+    if username == settings.RESERVED_NAME:
+        raise serializers.ValidationError('Имя \'me\' не разрешено.')
+    return username
 
 
-class BaseUserSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     username = serializers.RegexField(
+        regex=settings.USERNAME_REGEX,
+        max_length=settings.USERNAME_MAX_LENGTH,
         required=True,
-        max_length=150,
-        regex=r'^[\w.@+-]+\Z'
     )
     email = serializers.EmailField(
+        max_length=settings.EMAIL_MAX_LENGTH,
         required=True,
-        max_length=254
     )
 
-    def validate_username(self, value):
-        validate_reserved_username(value)
-
-        request = self.context.get('request')
-        instance = self.instance
-
-        if request and request.method == 'PATCH' and request.user.is_admin:
-            if instance and value == instance.username:
-                return value
-
-        qs = User.objects.filter(username=value)
-        if instance:
-            qs = qs.exclude(pk=instance.pk)
+    def validate_username(self, username):
+        username = validate_reserved_username(username)
+        qs = User.objects.filter(username=username)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            raise serializers.ValidationError("Такой username уже существует.")
-        return value
+            raise serializers.ValidationError('Такой username уже существует.')
+        return username
 
-    def validate_email(self, value):
-        request = self.context.get('request')
-        instance = self.instance
 
-        if request and request.method == 'PATCH' and request.user.is_admin:
-            if instance and value == instance.email:
-                return value
-
-        qs = User.objects.filter(email=value)
-        if instance:
-            qs = qs.exclude(pk=instance.pk)
+    def validate_email(self, email):
+        qs = User.objects.filter(email=email)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)   
         if qs.exists():
-            raise serializers.ValidationError("Такой email уже используется.")
-        return value
+            raise serializers.ValidationError('Этот email уже используется.')
+        return email
 
     class Meta:
         model = User
-        fields = ('username', 'email')
-
-
-class SignUpSerializer(serializers.Serializer):
-    username = serializers.RegexField(
-        required=True,
-        max_length=150,
-        regex=r'^[\w.@+-]+\Z'
-    )
-    email = serializers.EmailField(
-        required=True,
-        max_length=254
-    )
-
-    def validate_username(self, value):
-        return validate_reserved_username(value)
-
-
-class UserSerializer(BaseUserSerializer):
-    class Meta(BaseUserSerializer.Meta):
-        fields = BaseUserSerializer.Meta.fields + (
-            'first_name', 'last_name', 'bio', 'role'
+        fields = (
+            'username', 'email',
+            'first_name', 'last_name',
+            'bio', 'role',
         )
 
 
 class UserProfileSerializer(UserSerializer):
-    role = serializers.CharField(read_only=True)
+    class Meta(UserSerializer.Meta):
+        read_only_fields = ('role',)
+
+
+class SignUpSerializer(serializers.Serializer):
+    username = serializers.RegexField(
+        regex=settings.USERNAME_REGEX,
+        max_length=settings.USERNAME_MAX_LENGTH,
+        required=True,
+    )
+    email = serializers.EmailField(
+        max_length=settings.EMAIL_MAX_LENGTH,
+        required=True,
+    )
+
+    def validate_username(self, username):
+        return validate_reserved_username(username)
 
 
 class TokenSerializer(serializers.Serializer):
     username = serializers.RegexField(
+        regex=settings.USERNAME_REGEX,
+        max_length=settings.USERNAME_MAX_LENGTH,
         required=True,
-        max_length=150,
-        regex=r'^[\w.@+-]+\Z'
     )
-    confirmation_code = serializers.CharField(required=True)
+    confirmation_code = serializers.CharField(
+        required=True,
+        max_length=settings.CONFIRMATION_CODE_LENGTH,
+    )
 
-    def validate_username(self, value):
-        return validate_reserved_username(value)
-
-    def validate(self, data):
-        user = get_object_or_404(User, username=data['username'])
-        if user.confirmation_code != data['confirmation_code']:
-            raise serializers.ValidationError('Неверный код подтверждения.')
-        data['user'] = user
-        return data
+    def validate_username(self, username):
+        return validate_reserved_username(username)
 
 
 class CategorySerializer(serializers.ModelSerializer):
