@@ -100,7 +100,6 @@ class Title(models.Model):
     )
     genre = models.ManyToManyField(
         'Genre',
-        through='TitleGenre',
         verbose_name='Жанр'
     )
 
@@ -112,16 +111,6 @@ class Title(models.Model):
 
     def __str__(self):
         return self.name[:21]
-
-
-class TitleGenre(models.Model):
-    """Таблица связывающая произведения с жанром."""
-
-    title = models.ForeignKey(Title, on_delete=models.CASCADE,)
-    genre = models.ForeignKey(Genre, on_delete=models.CASCADE,)
-
-    def __str__(self):
-        return f'{self.title},{self.genre}'
 
 
 class BaseModelReviw(models.Model):

@@ -5,10 +5,10 @@ from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from reviews.models import (
-    Category, Genre, Title, TitleGenre, Review, Comment
+from .models import (
+    Category, Genre, Title, TitleGenre, Review, Comment, User
 )
-from users.models import User
+
 
 
 class Command(BaseCommand):
