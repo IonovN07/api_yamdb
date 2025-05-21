@@ -40,7 +40,7 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_email(self, email):
         qs = User.objects.filter(email=email)
         if self.instance:
-            qs = qs.exclude(pk=self.instance.pk)   
+            qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise serializers.ValidationError('Этот email уже используется.')
         return email
@@ -204,14 +204,14 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ('id', 'text', 'author', 'pub_date')
 #        read_only_fields = ('review',)
 
- #   def validate_text(self, value):
- #       '''Проверка, что текст комментария не пустой.'''
- #       if not value.strip():
- #           raise serializers.ValidationError(
- #               'Текст комментария не может быть пустым.',
- #               code='empty_comment'
- #           )
- #       return value
+#    def validate_text(self, value):
+#        '''Проверка, что текст комментария не пустой.'''
+#        if not value.strip():
+#            raise serializers.ValidationError(
+#                'Текст комментария не может быть пустым.',
+#                code='empty_comment'
+#            )
+#        return value
 
 #    def create(self, validated_data):
 #        '''Создание комментария с проверкой существования отзыва.'''

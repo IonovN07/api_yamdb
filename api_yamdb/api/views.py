@@ -6,7 +6,7 @@ from django.db.models import Avg
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status, permissions, viewsets 
+from rest_framework import filters, status, permissions, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import (
@@ -41,6 +41,7 @@ from api.permissions import (
 def generate_confirmation_code():
     return ''.join(str(random.randint(0, 9)) for _ in
                    range(settings.CONFIRMATION_CODE_LENGTH))
+
 
 def send_confirmation_email(user, confirmation_code):
     subject = 'Код подтверждения YaMDb!'
@@ -93,7 +94,7 @@ def signup(request):
             if user.email == email:
                 errors['email'] = [
                     'Этот email не соответствует данному имени.']
-            raise ValidationError(errors)   
+            raise ValidationError(errors)
     else:
         raise ValidationError({
             'username': ['Это имя уже занято другим пользователем.'],
@@ -130,7 +131,7 @@ def get_token(request):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    
+
     queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
@@ -186,7 +187,7 @@ class GenreViewSet(ListCreateDestroyViewSet):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    """Получить список всех отзывов."""
+    '''Получить список всех отзывов.'''
 
     serializer_class = ReviewSerializer
     permission_classes = (IsAuthorModeratorAdminOrReadOnly,)
@@ -194,62 +195,26 @@ class ReviewViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        """Получение всех отзывов к произведению."""
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        return title.reviews.all()
 
-        title = get_object_or_404(Title, id=self.kwargs['title_id'])
-        return title.reviews.all().order_by('-id')
+    def perform_create(self, serializer):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        serializer.save(author=self.request.user, title=title)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    """Получить список всех комментариев."""
+    '''Получить список всех комментариев.'''
+
     serializer_class = CommentSerializer
     permission_classes = (IsAuthorModeratorAdminOrReadOnly,)
     http_method_names = ['get', 'post', 'patch', 'delete']
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        """
-        Получение комментариев с проверкой принадлежности
-        отзыва к произведению.
-        """
-        title = get_object_or_404(Title, id=self.kwargs['title_id'])
-        review = get_object_or_404(
-            Review,
-            id=self.kwargs['review_id'],
-            title=title  # Проверка что отзыв принадлежит произведению
-        )
-        return review.comments.all().order_by('-id')
+        review = get_object_or_404(Review, id=self.kwargs.get('review_id'))
+        return review.comments.all()
 
     def perform_create(self, serializer):
-        """Создание комментария с проверкой принадлежности отзыва."""
-
-        title = get_object_or_404(Title, id=self.kwargs['title_id'])
-        review = get_object_or_404(
-            Review,
-            id=self.kwargs['review_id'],
-            title=title
-        )
+        review = get_object_or_404(Review, id=self.kwargs.get('review_id'))
         serializer.save(author=self.request.user, review=review)
-
-    def create(self, request, *args, **kwargs):
-        """Обработка создания комментария с валидацией."""
-
-        try:
-            return super().create(request, *args, **kwargs)
-        except ValidationError as e:
-            if 'empty_comment' in e.get_codes().get('text', []):
-                return Response(
-                    {"text": ["Текст комментария не может быть пустым."]},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            raise
-        except Exception as e:
-            if isinstance(e, Http404):
-                return Response(
-                    {
-                        "detail": "Отзыв не найден "
-                        "или не принадлежит указанному произведению."
-                    },
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            raise
