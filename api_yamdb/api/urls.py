@@ -10,7 +10,7 @@ from api.views import (
     signup,
     get_token,
     UserViewSet
-    )
+)
 
 
 router_v1 = DefaultRouter()

@@ -6,7 +6,7 @@ from django.db.models import Avg
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status, permissions, viewsets 
+from rest_framework import filters, permissions, mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import (
@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from api.filters import TitleFilter
-from api.mixins import AllowedMethodsMixin, ListCreateDestroyViewSet
+# from api.mixins import ListCreateDestroyViewSet
 from api.serializers import (
     CategorySerializer,
     GenreSerializer,
@@ -42,6 +42,7 @@ def generate_confirmation_code():
     return ''.join(str(random.randint(0, 9)) for _ in
                    range(settings.CONFIRMATION_CODE_LENGTH))
 
+
 def send_confirmation_email(user, confirmation_code):
     subject = 'Код подтверждения YaMDb!'
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yamdb.fake')
@@ -57,7 +58,9 @@ def send_confirmation_email(user, confirmation_code):
             <body>
                 <p>Здравствуйте, <strong>{user.username}</strong>!</p>
                 <p>Ваш код подтверждения:</p>
-                <p><code style="font-size: 1.2em;">{confirmation_code}</code></p>
+                <p>
+                    <code style="font-size: 1.2em;">{confirmation_code}</code>
+                </p>
                 <p>Используйте этот код для получения токена.</p>
             </body>
         </html>
@@ -93,7 +96,7 @@ def signup(request):
             if user.email == email:
                 errors['email'] = [
                     'Этот email не соответствует данному имени.']
-            raise ValidationError(errors)   
+            raise ValidationError(errors)
     else:
         raise ValidationError({
             'username': ['Это имя уже занято другим пользователем.'],
@@ -130,7 +133,7 @@ def get_token(request):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    
+
     queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
@@ -156,12 +159,15 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class TitleViewSet(AllowedMethodsMixin, viewsets.ModelViewSet):
+class TitleViewSet(viewsets.ModelViewSet):
     """Получить список всех произведений."""
 
-    queryset = Title.objects.annotate(rating=Avg("reviews__score"))
+    queryset = (
+        Title.objects.annotate(rating=Avg("reviews__score")).order_by('name')
+    )
     pagination_class = LimitOffsetPagination
     permission_classes = (IsAdminOrReadOnly,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
 
@@ -171,14 +177,26 @@ class TitleViewSet(AllowedMethodsMixin, viewsets.ModelViewSet):
         return TitleWriteSerializer
 
 
-class CategoryViewSet(ListCreateDestroyViewSet):
+class BaseCategoryGenreViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    permission_classes = (IsAdminOrReadOnly,)
+    lookup_field = 'slug'
+
+
+class CategoryViewSet(BaseCategoryGenreViewSet):
     """Получить список всех категорий."""
 
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(ListCreateDestroyViewSet):
+class GenreViewSet(BaseCategoryGenreViewSet):
     """Получить список всех жанров."""
 
     queryset = Genre.objects.all()
