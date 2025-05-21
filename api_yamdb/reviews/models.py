@@ -18,8 +18,10 @@ ROLE_CHOICES = [
 
 ROLE_MAX_LENGTH = max(len(role) for role, _ in ROLE_CHOICES)
 
+
 def current_year():
     return timezone.now().year
+
 
 class DynamicMaxValueValidator(MaxValueValidator):
     def __call__(self, value):
@@ -77,25 +79,28 @@ class BaseModel(models.Model):
     slug = models.SlugField(unique=True, verbose_name='Слаг')
 
     class Meta:
-        ordering = ['__str__']
         abstract = True
 
     def __str__(self):
         return self.name[:21]
 
+
 class Category(BaseModel):
     """Данная модель описывает таблицу с категориями произведений."""
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
     help_text = 'Название категории, не более 256 символов'
 
+
 class Genre(BaseModel):
     """Данная модель описывает таблицу с жанрами произведений."""
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
@@ -114,7 +119,11 @@ class Title(models.Model):
     )
     year = models.SmallIntegerField(
         verbose_name='Год',
-        validators=[DynamicMaxValueValidator(current_year())],
+        validators=[
+            MaxValueValidator(
+                current_year, message='Год не может быть больше текущего.'
+            )
+        ]
     )
     description = models.TextField(blank=True, verbose_name='Описание')
     category = models.ForeignKey(

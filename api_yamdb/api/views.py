@@ -6,7 +6,7 @@ from django.db.models import Avg
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status, permissions, viewsets 
+from rest_framework import filters, permissions, mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import (
@@ -42,6 +42,7 @@ def generate_confirmation_code():
     return ''.join(str(random.randint(0, 9)) for _ in
                    range(settings.CONFIRMATION_CODE_LENGTH))
 
+
 def send_confirmation_email(user, confirmation_code):
     subject = 'Код подтверждения YaMDb!'
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yamdb.fake')
@@ -57,7 +58,9 @@ def send_confirmation_email(user, confirmation_code):
             <body>
                 <p>Здравствуйте, <strong>{user.username}</strong>!</p>
                 <p>Ваш код подтверждения:</p>
-                <p><code style="font-size: 1.2em;">{confirmation_code}</code></p>
+                <p>
+                    <code style="font-size: 1.2em;">{confirmation_code}</code>
+                </p>
                 <p>Используйте этот код для получения токена.</p>
             </body>
         </html>
@@ -66,6 +69,7 @@ def send_confirmation_email(user, confirmation_code):
     msg = EmailMultiAlternatives(subject, text_content, from_email, to)
     msg.attach_alternative(html_content, "text/html")
     msg.send()
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -92,7 +96,7 @@ def signup(request):
             if user.email == email:
                 errors['email'] = [
                     'Этот email не соответствует данному имени.']
-            raise ValidationError(errors)   
+            raise ValidationError(errors)
     else:
         raise ValidationError({
             'username': ['Это имя уже занято другим пользователем.'],
@@ -105,6 +109,7 @@ def signup(request):
 
     send_confirmation_email(user, confirmation_code)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -128,7 +133,7 @@ def get_token(request):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    
+
     queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
@@ -157,7 +162,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class TitleViewSet(viewsets.ModelViewSet):
     """Получить список всех произведений."""
 
-    queryset = ( 
+    queryset = (
         Title.objects.annotate(rating=Avg("reviews__score")).order_by('name')
     )
     pagination_class = LimitOffsetPagination
@@ -178,7 +183,7 @@ class BaseCategoryGenreViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
-    filter_backends = (SearchFilter,)
+    filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     permission_classes = (IsAdminOrReadOnly,)
     lookup_field = 'slug'

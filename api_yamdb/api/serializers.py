@@ -1,5 +1,3 @@
-import datetime as dt
-
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
@@ -37,11 +35,10 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Такой username уже существует.')
         return username
 
-
     def validate_email(self, email):
         qs = User.objects.filter(email=email)
         if self.instance:
-            qs = qs.exclude(pk=self.instance.pk)   
+            qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise serializers.ValidationError('Этот email уже используется.')
         return email
@@ -126,6 +123,7 @@ class TitleViewSerializer(serializers.ModelSerializer):
         fields = all_fields
         read_only_fields = all_fields
 
+
 class TitleWriteSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
         queryset=Category.objects.all(),
@@ -143,15 +141,6 @@ class TitleWriteSerializer(serializers.ModelSerializer):
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
         model = Title
-
-    def validate_year(self, year):
-        '''Валидация поля год.'''
-
-        if year > dt.datetime.today().year:
-            raise serializers.ValidationError(
-                'Год произведения не может быть больше текущего года.'
-            )
-        return year
 
     # def validate_genre(self, genre):
     #     if not genre:
