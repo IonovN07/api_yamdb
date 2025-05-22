@@ -17,7 +17,6 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from api.filters import TitleFilter
-# from api.mixins import ListCreateDestroyViewSet
 from api.serializers import (
     CategorySerializer,
     GenreSerializer,
