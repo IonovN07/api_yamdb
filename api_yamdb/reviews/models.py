@@ -25,12 +25,6 @@ def current_year():
     return timezone.now().year
 
 
-class DynamicMaxValueValidator(MaxValueValidator):
-    def __call__(self, value):
-        self.limit_value = current_year()
-        super().__call__(value)
-
-
 class User(AbstractUser):
     username = models.CharField(
         max_length=settings.USERNAME_MAX_LENGTH,

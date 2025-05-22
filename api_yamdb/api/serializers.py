@@ -142,12 +142,6 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         )
         model = Title
 
-    # def validate_genre(self, genre):
-    #     if not genre:
-    #         raise serializers.ValidationError(
-    #             "Жанр произведения не может быть пустым"
-    #         )
-    #     return genre
 
     def to_representation(self, instance):
         return TitleViewSerializer(instance).data
