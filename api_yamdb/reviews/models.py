@@ -140,8 +140,13 @@ class Title(models.Model):
         default_related_name = 'titles'
 
     def __str__(self):
+        category_name = self.category.name[:21] if self.category else 'No category'
+        return f'{self.name[:21]} {self.year} {category_name}'
+
+    '''
         return (f'{self.name[:21]} {self.year[:21]} '
                 f'{self.category.name[:21]}')
+        '''
 
 
 class BaseContentModel(models.Model):
