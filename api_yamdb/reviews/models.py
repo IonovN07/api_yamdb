@@ -4,8 +4,10 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from api_yamdb.settings import LENGTH_STR
 
+LENGTH_STR: int = 15
+MIN_RATING: int = 1
+MAX_RATING: int = 10
 
 USER = 'user'
 MODERATOR = 'moderator'
@@ -148,41 +150,56 @@ class Title(models.Model):
                 f'{self.category.name[:21]}')
 
 
-class BaseModelReviw(models.Model):
-    """Абстрактная модель для соблюдения DRY."""
+class BaseContentModel(models.Model):
+    '''Абстрактная модель с общими полями.'''
 
     text = models.TextField(
-        'Текст записи', max_length=500, help_text='Поле для новой записи'
+        'Текст записи',
+        max_length=256,
+        help_text='Поле для новой записи'
     )
-    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
-
-    class Meta:
-        abstract = True
-
-
-class Review(BaseModelReviw):
-    """Модель для управления отзывами произведений."""
-
-    title = models.ForeignKey(
-        Title,
-        on_delete=models.CASCADE,
-        related_name='reviews',
-        verbose_name='Произведение',
+    pub_date = models.DateTimeField(
+        'Дата публикации',
+        auto_now_add=True
     )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='reviews',
+        related_name='%(class)ss',  # Автоматическое создание related_name
         verbose_name='Автор',
+    )
+
+    class Meta:
+        abstract = True
+        ordering = ('-pub_date',)
+        # Добавляем default_related_name для всех ForeignKey в дочерних классах
+        default_related_name = '%(class)ss'
+
+    def __str__(self):
+        '''Метод для возврата сокращенного текста объекта.'''
+        return self.text[:LENGTH_STR]
+
+
+class Review(BaseContentModel):
+    '''Модель для управления отзывами произведений.'''
+
+    title = models.ForeignKey(
+        Title,
+        on_delete=models.CASCADE,
+        verbose_name='Произведение',
     )
     score = models.IntegerField(
         verbose_name='Оценка',
-        help_text='Ваша оценка данному произведению от 1 до 10 (целое число)',
-        validators=(MinValueValidator(1), MaxValueValidator(10),))
+        help_text=f'Ваша оценка данному произведению от {MIN_RATING}'
+                  f'до {MAX_RATING} (целое число)',
+        validators=(MinValueValidator(MIN_RATING),
+                    MaxValueValidator(MAX_RATING),)
+    )
 
-    class Meta:
+    class Meta(BaseContentModel.Meta):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
+        # related_name будет автоматически 'reviews' из default_related_name
         constraints = (
             models.UniqueConstraint(
                 fields=['title', 'author'],
@@ -190,31 +207,16 @@ class Review(BaseModelReviw):
             ),
         )
 
-    def __str__(self):
-        """Метод для возврата названия объекта."""
-        return self.text[:LENGTH_STR]
 
-
-class Comment(BaseModelReviw):
-    """Модель для управления комментариями к отзывам."""
+class Comment(BaseContentModel):
+    '''Модель для управления комментариями к отзывам.'''
 
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
-        related_name='comments',
-        verbose_name='Отзыв',
-    )
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='comments',
-        verbose_name='Автор',
+        verbose_name='Отзыв',  # related_name теперь определяется в Meta
     )
 
-    class Meta:
+    class Meta(BaseContentModel.Meta):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
-
-    def __str__(self):
-        """Метод для возврата названия объекта."""
-        return self.text[:LENGTH_STR]
