@@ -19,12 +19,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_filters',
     'rest_framework',
     'rest_framework_simplejwt',
-    'api',
+    'django_filters',
     'reviews',
-    'users',
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -59,8 +58,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'api_yamdb.wsgi.application'
 
 
-# Database
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -68,8 +65,6 @@ DATABASES = {
     }
 }
 
-
-# Password validation
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -87,8 +82,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-
 LANGUAGE_CODE = 'ru-RU'
 
 TIME_ZONE = 'Europe/Moscow'
@@ -101,7 +94,7 @@ STATIC_URL = '/static/'
 
 STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'reviews.User'
 
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
@@ -125,4 +118,10 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-LENGTH_STR: int = 15
+USERNAME_MAX_LENGTH = 150
+EMAIL_MAX_LENGTH = 254
+NAME_MAX_LENGTH = 150
+CONFIRMATION_CODE_LENGTH = 6
+RESERVED_NAME = 'me'
+DEFAULT_FROM_EMAIL = 'noreply@yamdb.fake'
+USERNAME_REGEX = r'^[\w.@+-]+\Z'
