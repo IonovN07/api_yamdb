@@ -2,7 +2,6 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from rest_framework.exceptions import NotFound
 
 from reviews.models import Category, Genre, Title, Review, Comment
 
@@ -132,7 +131,9 @@ class TitleWriteSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         queryset=Genre.objects.all(),
         slug_field='slug',
-        many=True
+        many=True,
+        allow_empty=False,
+        allow_null=False,
     )
     rating = serializers.IntegerField(read_only=True, default=None)
 
@@ -141,7 +142,6 @@ class TitleWriteSerializer(serializers.ModelSerializer):
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
         model = Title
-
 
     def to_representation(self, instance):
         return TitleViewSerializer(instance).data
