@@ -1,10 +1,9 @@
 from django.contrib import admin
-from django.utils.html import format_html
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.http import urlencode
 
-from reviews.models import Category, Genre, Title, Review, Comment
-
+from reviews.models import Category, Comment, Genre, Review, Title, User
 
 MAX_LENGTH_DISPLAY_TEXT = 50
 
@@ -116,3 +115,16 @@ class CommentAdmin(admin.ModelAdmin):
 
 
 admin.site.empty_value_display = 'Не задано'
+
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    fields = ("username", "email", "first_name", "last_name", "bio", "role")
+    list_display = (
+        "username",
+        "email",
+        "first_name",
+        "last_name",
+        "bio",
+        "role",
+    )
+    list_editable = ("role",)

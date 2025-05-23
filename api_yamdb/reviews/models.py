@@ -1,9 +1,9 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
-
 
 LENGTH_STR: int = 15
 MIN_RATING: int = 1
@@ -27,25 +27,31 @@ def current_year():
 
 class User(AbstractUser):
     username = models.CharField(
+        verbose_name="Имя пользователя",
         max_length=settings.USERNAME_MAX_LENGTH,
         unique=True,
     )
     email = models.EmailField(
+        verbose_name="Почта",
         max_length=settings.EMAIL_MAX_LENGTH,
         unique=True,
     )
     first_name = models.CharField(
+        verbose_name="Имя",
         max_length=settings.NAME_MAX_LENGTH,
         blank=True,
     )
     last_name = models.CharField(
+        verbose_name="Фамилия",
         max_length=settings.NAME_MAX_LENGTH,
         blank=True,
     )
     bio = models.TextField(
+        verbose_name="Биография",
         blank=True,
     )
     role = models.CharField(
+        verbose_name="Роль",
         max_length=ROLE_MAX_LENGTH,
         choices=ROLE_CHOICES,
         default=USER,
@@ -62,6 +68,12 @@ class User(AbstractUser):
     @property
     def is_moderator(self):
         return self.role == MODERATOR
+
+    def clean(self):
+        if self.username == settings.RESERVED_NAME:
+            raise ValidationError({
+                'username': f'Имя "{settings.RESERVED_NAME}" не разрешено.'
+            })
 
 
 class BaseModel(models.Model):
