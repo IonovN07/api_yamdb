@@ -116,6 +116,7 @@ class CommentAdmin(admin.ModelAdmin):
 
 admin.site.empty_value_display = 'Не задано'
 
+
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     fields = ("username", "email", "first_name", "last_name", "bio", "role")

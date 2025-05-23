@@ -90,7 +90,7 @@ class BaseModel(models.Model):
         abstract = True
 
     def __str__(self):
-        return self.name[:21]
+        return self.name[:LENGTH_STR]
 
 
 class Category(BaseModel):
@@ -152,13 +152,12 @@ class Title(models.Model):
         default_related_name = 'titles'
 
     def __str__(self):
-        category_name = self.category.name[:21] if self.category else 'No category'
-        return f'{self.name[:21]} {self.year} {category_name}'
-
-    '''
-        return (f'{self.name[:21]} {self.year[:21]} '
-                f'{self.category.name[:21]}')
-        '''
+        category_name = (
+            self.category.name[:LENGTH_STR]
+            if self.category
+            else 'Категории нет'
+        )
+        return f'{self.name[::LENGTH_STR]} {self.year} {category_name}'
 
 
 class BaseContentModel(models.Model):
