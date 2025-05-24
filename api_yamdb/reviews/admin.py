@@ -87,16 +87,14 @@ class CommentAdmin(admin.ModelAdmin):
         'text_preview',
     )
     list_display_links = ('review_link',)
-    list_filter = ('review', 'pub_date', 'author__isnull')
+    list_filter = ('review', 'pub_date', 'author')
     search_fields = ('review__text__startswith', 'author__username')
     raw_id_fields = ('review', 'author')
 
     @admin.display(description='Отзыв')
     def review_link(self, comment):
         url = reverse('admin:reviews_review_change', args=[comment.review.id])
-        return format_html(
-            '<a href="{}">Отзыв #{}</a>', url, comment.review.id
-            )
+        return format_html('<a href="{}">Отзыв #{}</a>', url, comment.review.id)
 
     @admin.display(description='Автор')
     def author_link(self, comment):
