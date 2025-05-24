@@ -202,24 +202,25 @@ class GenreViewSet(BaseCategoryGenreViewSet):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    '''Получить список всех отзывов.'''
+    """Получить список всех отзывов."""
 
     serializer_class = ReviewSerializer
     permission_classes = (IsAuthorModeratorAdminOrReadOnly,)
     http_method_names = ['get', 'post', 'patch', 'delete']
     pagination_class = PageNumberPagination
 
+    def get_title(self):
+        return get_object_or_404(Title, id=self.kwargs['title_id'])
+
     def get_queryset(self):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        return title.reviews.all()
+        return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(author=self.request.user, title=self.get_title())
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    '''Получить список всех комментариев.'''
+    """Получить список всех комментариев."""
 
     serializer_class = CommentSerializer
     permission_classes = (IsAuthorModeratorAdminOrReadOnly,)
@@ -227,16 +228,14 @@ class CommentViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
 
     def get_review(self):
-        title_id = self.kwargs.get('title_id')
-        review_id = self.kwargs.get('review_id')
-
-        title = get_object_or_404(Title, id=title_id)
-        return get_object_or_404(Review, id=review_id, title=title)
+        return get_object_or_404(
+            Review,
+            id=self.kwargs['review_id'],
+            title_id=self.kwargs['title_id']
+        )
 
     def get_queryset(self):
-        review = self.get_review()
-        return review.comments.all()
+        return self.get_review().comments.all()
 
     def perform_create(self, serializer):
-        review = self.get_review()
-        serializer.save(author=self.request.user, review=review)
+        serializer.save(author=self.request.user, review=self.get_review())
