@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from reviews.models import Category, Genre, Title, Review, Comment
@@ -166,19 +165,13 @@ class ReviewSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if self.context['request'].method != 'POST':
             return data
-
         title_id = self.context['view'].kwargs['title_id']
         author = self.context['request'].user
-
         if Review.objects.filter(title_id=title_id, author=author).exists():
             title = Title.objects.get(id=title_id)
             raise serializers.ValidationError(
                 f'Вы уже оставляли отзыв на произведение "{title.name}"'
             )
-
-        title = get_object_or_404(Title, id=title_id)
-        data['author'] = author
-        data['title'] = title
         return data
 
 
