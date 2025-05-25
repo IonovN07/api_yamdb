@@ -1,9 +1,14 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
-from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
+
+from api.validators import validate_username_value
+
+USERNAME_MAX_LENGTH = 150
+EMAIL_MAX_LENGTH = 254
+NAME_MAX_LENGTH = 150
 
 LENGTH_STR: int = 15
 MIN_RATING: int = 1
@@ -27,23 +32,24 @@ def current_year():
 
 class User(AbstractUser):
     username = models.CharField(
-        verbose_name="Имя пользователя",
-        max_length=settings.USERNAME_MAX_LENGTH,
+        verbose_name="Логин",
+        max_length=USERNAME_MAX_LENGTH,
         unique=True,
+        validators=[validate_username_value],
     )
     email = models.EmailField(
         verbose_name="Почта",
-        max_length=settings.EMAIL_MAX_LENGTH,
+        max_length=EMAIL_MAX_LENGTH,
         unique=True,
     )
     first_name = models.CharField(
         verbose_name="Имя",
-        max_length=settings.NAME_MAX_LENGTH,
+        max_length=NAME_MAX_LENGTH,
         blank=True,
     )
     last_name = models.CharField(
         verbose_name="Фамилия",
-        max_length=settings.NAME_MAX_LENGTH,
+        max_length=NAME_MAX_LENGTH,
         blank=True,
     )
     bio = models.TextField(
@@ -60,20 +66,19 @@ class User(AbstractUser):
         max_length=settings.CONFIRMATION_CODE_LENGTH,
         blank=True,
     )
+    confirmation_code_created = models.DateTimeField(
+        auto_now_add=True,
+        blank=True,
+    )
 
     @property
     def is_admin(self):
-        return self.role == ADMIN or self.is_staff or self.is_superuser
+        return self.role == ADMIN or self.is_staff
 
     @property
     def is_moderator(self):
         return self.role == MODERATOR
 
-    def clean(self):
-        if self.username == settings.RESERVED_NAME:
-            raise ValidationError({
-                'username': f'Имя "{settings.RESERVED_NAME}" не разрешено.'
-            })
 
 
 class BaseModel(models.Model):

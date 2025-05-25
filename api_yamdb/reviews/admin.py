@@ -117,7 +117,17 @@ class UserAdmin(admin.ModelAdmin):
         "email",
         "first_name",
         "last_name",
-        "bio",
+        "bio_preview",
         "role",
     )
     list_editable = ("role",)
+    search_fields = ("username", "email", "first_name", "last_name")
+    list_filter = ("role",)
+
+    def bio_preview(self, obj):
+        return (
+            obj.bio[:MAX_LENGTH_DISPLAY_TEXT] + '...'
+            if obj.bio and len(obj.bio) > MAX_LENGTH_DISPLAY_TEXT
+            else obj.bio
+        )
+    bio_preview.short_description = 'О себе'
