@@ -1,11 +1,12 @@
 from django.conf import settings
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from api.validators import UsernameValidatorMixin
-from reviews.models import Category, Comment, EMAIL_MAX_LENGTH, Genre, Review, \
+from reviews.models import (
+    Category, Comment, EMAIL_MAX_LENGTH, Genre, Review,
     Title, USERNAME_MAX_LENGTH, User
+)
 
 
 class UserSerializer(UsernameValidatorMixin, serializers.ModelSerializer):
@@ -80,7 +81,7 @@ class TitleViewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        all_fields = (
+        fields = (
             'id',
             'name',
             'year',
@@ -89,8 +90,7 @@ class TitleViewSerializer(serializers.ModelSerializer):
             'genre',
             'category'
         )
-        fields = all_fields
-        read_only_fields = all_fields
+        read_only_fields = fields
 
 
 class TitleWriteSerializer(serializers.ModelSerializer):
@@ -105,11 +105,10 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         allow_empty=False,
         allow_null=False,
     )
-    rating = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
         fields = (
-            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+            'id', 'name', 'year', 'description', 'genre', 'category'
         )
         model = Title
 

@@ -152,7 +152,8 @@ class TitleViewSet(viewsets.ModelViewSet):
     """Получить список всех произведений."""
 
     queryset = (
-        Title.objects.annotate(rating=Avg("reviews__score")).order_by('name')
+        Title.objects.annotate(rating=Avg("reviews__score"))
+        .order_by(*Title._meta.ordering)
     )
     pagination_class = LimitOffsetPagination
     permission_classes = (IsAdminOrReadOnly,)
@@ -166,7 +167,7 @@ class TitleViewSet(viewsets.ModelViewSet):
         return TitleWriteSerializer
 
 
-class BaseCategoryGenreViewSet(
+class MixinViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
@@ -178,14 +179,14 @@ class BaseCategoryGenreViewSet(
     lookup_field = 'slug'
 
 
-class CategoryViewSet(BaseCategoryGenreViewSet):
+class CategoryViewSet(MixinViewSet):
     """Получить список всех категорий."""
 
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(BaseCategoryGenreViewSet):
+class GenreViewSet(MixinViewSet):
     """Получить список всех жанров."""
 
     queryset = Genre.objects.all()

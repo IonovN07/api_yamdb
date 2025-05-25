@@ -24,14 +24,8 @@ class TitleAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
-@admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug')
-    list_display_links = ('name',)
-
-
-@admin.register(Genre)
-class GenreAdmin(admin.ModelAdmin):
+@admin.register(Category, Genre)
+class GroupAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
     list_display_links = ('name',)
 
@@ -94,7 +88,9 @@ class CommentAdmin(admin.ModelAdmin):
     @admin.display(description='Отзыв')
     def review_link(self, comment):
         url = reverse('admin:reviews_review_change', args=[comment.review.id])
-        return format_html('<a href="{}">Отзыв #{}</a>', url, comment.review.id)
+        return format_html(
+            '<a href="{}">Отзыв #{}</a>', url, comment.review.id
+        )
 
     @admin.display(description='Автор')
     def author_link(self, comment):

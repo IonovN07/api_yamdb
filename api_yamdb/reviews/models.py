@@ -10,9 +10,9 @@ USERNAME_MAX_LENGTH = 150
 EMAIL_MAX_LENGTH = 254
 NAME_MAX_LENGTH = 150
 
-LENGTH_STR: int = 15
-MIN_RATING: int = 1
-MAX_RATING: int = 10
+MAX_DISPLAY_LENGTH = 15
+MIN_RATING = 1
+MAX_RATING = 10
 
 USER = 'user'
 MODERATOR = 'moderator'
@@ -22,8 +22,6 @@ ROLE_CHOICES = [
     (MODERATOR, 'moderator'),
     (ADMIN, 'admin')
 ]
-
-ROLE_MAX_LENGTH = max(len(role) for role, _ in ROLE_CHOICES)
 
 
 def current_year():
@@ -58,7 +56,7 @@ class User(AbstractUser):
     )
     role = models.CharField(
         verbose_name="Роль",
-        max_length=ROLE_MAX_LENGTH,
+        max_length=max(len(role) for role, _ in ROLE_CHOICES),
         choices=ROLE_CHOICES,
         default=USER,
     )
@@ -80,55 +78,50 @@ class User(AbstractUser):
         return self.role == MODERATOR
 
 
-
-class BaseModel(models.Model):
+class BaseGroupModel(models.Model):
     """Базовый класс для моделей с общими свойствами."""
 
     name = models.CharField(
         max_length=256,
         verbose_name='Название',
-        help_text=''
     )
     slug = models.SlugField(unique=True, verbose_name='Слаг')
 
     class Meta:
+        ordering = ('name',)
         abstract = True
 
     def __str__(self):
         return self.name[:MAX_DISPLAY_LENGTH]
 
 
-class Category(BaseModel):
-    """Данная модель описывает таблицу с категориями произведений."""
+class Category(BaseGroupModel):
+    """Модель описывает таблицу с категориями произведений."""
 
-    class Meta:
-        ordering = ('name',)
+    class Meta(BaseGroupModel.Meta):
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
-    help_text = 'Название категории, не более 256 символов'
+    help_text = 'Название категории.'
 
 
-class Genre(BaseModel):
-    """Данная модель описывает таблицу с жанрами произведений."""
+class Genre(BaseGroupModel):
+    """Модель описывает таблицу с жанрами произведений."""
 
-    class Meta:
-        ordering = ('name',)
+    class Meta(BaseGroupModel.Meta):
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
-    help_text = 'Название жанра, не более 256 символов'
-
 
 class Title(models.Model):
-    """Данная модель описывает таблицу с произведениями,
+    """Модель описывает таблицу с произведениями,
     на которые можно писать отзывы.
     """
 
     name = models.CharField(
         max_length=256,
         verbose_name='Название',
-        help_text='Название произведения, не более 256 символов'
+        help_text='Название произведения.'
     )
     year = models.SmallIntegerField(
         verbose_name='Год',
@@ -157,12 +150,10 @@ class Title(models.Model):
         default_related_name = 'titles'
 
     def __str__(self):
-        category_name = (
-            self.category.name[:MAX_DISPLAY_LENGTH]
-            if self.category
-            else 'Категории нет'
+        return (
+            f'{self.name[:MAX_DISPLAY_LENGTH]} {self.year} '
+            f'{{self.category={self.category.name[:MAX_DISPLAY_LENGTH]}}}'
         )
-        return f'{self.name[::MAX_DISPLAY_LENGTH]} {self.year} {category_name}'
 
 
 class BaseContentModel(models.Model):
