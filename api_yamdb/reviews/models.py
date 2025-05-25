@@ -5,7 +5,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-MAX_DISPLAY_LENGTH = 15
+LENGTH_STR = 15
 MIN_RATING: int = 1
 MAX_RATING: int = 10
 
