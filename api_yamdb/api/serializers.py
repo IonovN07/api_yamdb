@@ -1,11 +1,12 @@
 from django.conf import settings
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from api.validators import UsernameValidatorMixin
-from reviews.models import Category, Comment, EMAIL_MAX_LENGTH, Genre, Review, \
+from reviews.models import (
+    Category, Comment, EMAIL_MAX_LENGTH, Genre, Review,
     Title, USERNAME_MAX_LENGTH, User
+)
 
 
 class UserSerializer(UsernameValidatorMixin, serializers.ModelSerializer):

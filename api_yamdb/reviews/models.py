@@ -78,7 +78,6 @@ class User(AbstractUser):
         return self.role == MODERATOR
 
 
-
 class BaseGroupModel(models.Model):
     """Базовый класс для моделей с общими свойствами."""
 
@@ -89,7 +88,7 @@ class BaseGroupModel(models.Model):
     slug = models.SlugField(unique=True, verbose_name='Слаг')
 
     class Meta:
-        ordering =('name',)
+        ordering = ('name',)
         abstract = True
 
     def __str__(self):
