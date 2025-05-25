@@ -1,54 +1,48 @@
 import random
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, permissions, mixins, status, viewsets
+from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
-from rest_framework.pagination import (
-    PageNumberPagination, LimitOffsetPagination
-)
+from rest_framework.pagination import (LimitOffsetPagination,
+                                       PageNumberPagination)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from api.filters import TitleFilter
-from api.serializers import (
-    CategorySerializer,
-    GenreSerializer,
-    CommentSerializer,
-    TitleViewSerializer,
-    TitleWriteSerializer,
-    ReviewSerializer,
-    SignUpSerializer,
-    TokenSerializer,
-    UserProfileSerializer,
-    UserSerializer
-)
+from api.permissions import (IsAdmin, IsAdminOrReadOnly,
+                             IsAuthorModeratorAdminOrReadOnly)
+from api.serializers import (CategorySerializer, CommentSerializer,
+                             GenreSerializer, ReviewSerializer,
+                             SignUpSerializer, TitleViewSerializer,
+                             TitleWriteSerializer, TokenSerializer,
+                             UserProfileSerializer, UserSerializer)
 from reviews.models import Category, Genre, Review, Title, User
-from api.permissions import (
-    IsAdmin,
-    IsAuthorModeratorAdminOrReadOnly,
-    IsAdminOrReadOnly,
-)
 
 
 def generate_confirmation_code():
-    return ''.join(str(random.randint(0, 9)) for _ in
-                   range(settings.CONFIRMATION_CODE_LENGTH))
+    return ''.join(random.choices(
+        settings.ALLOWED_CONFIRMATION_SYMBOLS,
+        k=settings.CONFIRMATION_CODE_LENGTH
+    ))
 
 
-def send_confirmation_email(user, confirmation_code):
+def send_confirmation_email(user):
     subject = 'Код подтверждения YaMDb!'
-    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yamdb.fake')
+    from_email = settings.DEFAULT_FROM_EMAIL
     to = [user.email]
 
     text_content = (
         f'Здравствуйте, {user.username}!\n\n'
-        f'Ваш код подтверждения:\n\n{confirmation_code}\n\n'
+        f'Ваш код подтверждения:\n\n{user.confirmation_code}\n\n'
         'Используйте этот код для получения токена.'
     )
     html_content = f'''
@@ -57,7 +51,8 @@ def send_confirmation_email(user, confirmation_code):
                 <p>Здравствуйте, <strong>{user.username}</strong>!</p>
                 <p>Ваш код подтверждения:</p>
                 <p>
-                    <code style="font-size: 1.2em;">{confirmation_code}</code>
+                    <code style="font-size: 1.2em;">
+                    {user.confirmation_code}</code>
                 </p>
                 <p>Используйте этот код для получения токена.</p>
             </body>
@@ -72,40 +67,30 @@ def send_confirmation_email(user, confirmation_code):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
+    USERNAME_ERROR = "Это имя уже занято другим пользователем."
+    EMAIL_ERROR = "Этот email уже используется другим пользователем."
+
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
     username = serializer.validated_data['username']
     email = serializer.validated_data['email']
 
-    existing_users = list(
-        User.objects.filter(username=username) | User.objects.filter(
-            email=email))
+    try:
+        user, created = User.objects.get_or_create(username=username,
+                                                   email=email)
+    except IntegrityError:
+        errors = {}
+        if User.objects.filter(username=username).exists():
+            errors['username'] = [USERNAME_ERROR]
+        if User.objects.filter(email=email).exists():
+            errors['email'] = [EMAIL_ERROR]
+        raise ValidationError(errors)
 
-    if not existing_users:
-        user = User.objects.create(username=username, email=email)
-    elif len(existing_users) == 1:
-        user = existing_users[0]
-        if user.username != username or user.email != email:
-            errors = {}
-            if user.username == username:
-                errors['username'] = [
-                    'Это имя уже занято другим пользователем.']
-            if user.email == email:
-                errors['email'] = [
-                    'Этот email не соответствует данному имени.']
-            raise ValidationError(errors)
-    else:
-        raise ValidationError({
-            'username': ['Это имя уже занято другим пользователем.'],
-            'email': ['Этот email уже используется другим пользователем.']
-        })
-
-    confirmation_code = generate_confirmation_code()
-    user.confirmation_code = confirmation_code
-    user.save()
-
-    send_confirmation_email(user, confirmation_code)
+    user.confirmation_code = generate_confirmation_code()
+    user.confirmation_code_created = timezone.now()
+    user.save(update_fields=['confirmation_code', 'confirmation_code_created'])
+    send_confirmation_email(user)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -120,11 +105,17 @@ def get_token(request):
 
     user = get_object_or_404(User, username=username)
 
+    if not user.confirmation_code:
+        raise ValidationError('Код уже использован или не выдавался.')
+
+    # Проверка времени жизни кода
+    expiration_time = user.confirmation_code_created + timedelta(
+        minutes=settings.CONFIRMATION_CODE_EXPIRY_MINUTES)
+    if timezone.now() > expiration_time:
+        raise ValidationError('Срок действия кода истёк.')
+
     if user.confirmation_code != code:
         raise ValidationError('Неверный код подтверждения.')
-
-    user.confirmation_code = ''
-    user.save()
 
     token = AccessToken.for_user(user)
     return Response({'token': str(token)}, status=status.HTTP_200_OK)

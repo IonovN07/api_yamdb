@@ -1,46 +1,24 @@
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
-from reviews.models import Category, Genre, Title, Review, Comment
-
-User = get_user_model()
-
-
-def validate_reserved_username(username: str):
-    if username == settings.RESERVED_NAME:
-        raise serializers.ValidationError('Имя \'me\' не разрешено.')
-    return username
+from api.validators import UsernameValidatorMixin
+from reviews.models import Category, Comment, EMAIL_MAX_LENGTH, Genre, Review, \
+    Title, USERNAME_MAX_LENGTH, User
 
 
-class UserSerializer(serializers.ModelSerializer):
-    username = serializers.RegexField(
-        regex=settings.USERNAME_REGEX,
-        max_length=settings.USERNAME_MAX_LENGTH,
+class UserSerializer(UsernameValidatorMixin, serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=USERNAME_MAX_LENGTH,
         required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())],
     )
     email = serializers.EmailField(
-        max_length=settings.EMAIL_MAX_LENGTH,
+        max_length=EMAIL_MAX_LENGTH,
         required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())],
     )
-
-    def validate_username(self, username):
-        username = validate_reserved_username(username)
-        qs = User.objects.filter(username=username)
-        if self.instance:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise serializers.ValidationError('Такой username уже существует.')
-        return username
-
-    def validate_email(self, email):
-        qs = User.objects.filter(email=email)
-        if self.instance:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise serializers.ValidationError('Этот email уже используется.')
-        return email
 
     class Meta:
         model = User
@@ -56,34 +34,26 @@ class UserProfileSerializer(UserSerializer):
         read_only_fields = ('role',)
 
 
-class SignUpSerializer(serializers.Serializer):
-    username = serializers.RegexField(
-        regex=settings.USERNAME_REGEX,
-        max_length=settings.USERNAME_MAX_LENGTH,
+class SignUpSerializer(UsernameValidatorMixin, serializers.Serializer):
+    username = serializers.CharField(
+        max_length=USERNAME_MAX_LENGTH,
         required=True,
     )
     email = serializers.EmailField(
-        max_length=settings.EMAIL_MAX_LENGTH,
+        max_length=EMAIL_MAX_LENGTH,
         required=True,
     )
 
-    def validate_username(self, username):
-        return validate_reserved_username(username)
 
-
-class TokenSerializer(serializers.Serializer):
-    username = serializers.RegexField(
-        regex=settings.USERNAME_REGEX,
-        max_length=settings.USERNAME_MAX_LENGTH,
+class TokenSerializer(UsernameValidatorMixin, serializers.Serializer):
+    username = serializers.CharField(
+        max_length=USERNAME_MAX_LENGTH,
         required=True,
     )
     confirmation_code = serializers.CharField(
         required=True,
         max_length=settings.CONFIRMATION_CODE_LENGTH,
     )
-
-    def validate_username(self, username):
-        return validate_reserved_username(username)
 
 
 class CategorySerializer(serializers.ModelSerializer):
