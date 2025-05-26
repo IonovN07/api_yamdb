@@ -10,9 +10,13 @@ def validate_username_value(value):
             f'Имя "{settings.RESERVED_NAME}" не разрешено.'
         )
 
-    if not re.match(settings.USERNAME_REGEX, value):
+    allowed_char_class = settings.USERNAME_REGEX.strip('^\\Z')
+    invalid_chars = re.sub(allowed_char_class, '', value)
+
+    if invalid_chars:
+        unique_invalids = ', '.join(sorted(set(invalid_chars)))
         raise ValidationError(
-            'Введите корректное имя. Разрешены буквы, цифры и ./@/+/-.'
+            f'Имя содержит недопустимые символы: {unique_invalids}'
         )
 
 
