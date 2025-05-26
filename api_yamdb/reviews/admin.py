@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import reverse
-from django.utils.html import format_html
 from django.utils.http import urlencode
+from django.utils.safestring import mark_safe
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
@@ -24,14 +24,8 @@ class TitleAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
-@admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug')
-    list_display_links = ('name',)
-
-
-@admin.register(Genre)
-class GenreAdmin(admin.ModelAdmin):
+@admin.register(Category, Genre)
+class GroupAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
     list_display_links = ('name',)
 
@@ -48,37 +42,36 @@ class ReviewAdmin(admin.ModelAdmin):
         'comments_link',
     )
     list_display_links = ('title_link',)
-    list_filter = ('title', 'author', 'score', 'pub_date')
-    search_fields = ('title__name', 'author__username', 'text')
+    list_filter = ('score', 'pub_date')
+    search_fields = ('title__name', 'author__username', 'text__startswith')
     raw_id_fields = ('title', 'author')
 
-    def title_link(self, obj):
-        url = reverse('admin:reviews_title_change', args=[obj.title.id])
-        return format_html('<a href="{}">{}</a>', url, obj.title.name)
-    title_link.short_description = 'Произведение'
+    @admin.display(description='Произведение')
+    @mark_safe
+    def title_link(self, review):
+        url = reverse('admin:reviews_title_change', args=[review.title.id])
+        return f'<a href="{url}">{review.title.name}</a>'
 
-    def author_link(self, obj):
-        url = reverse('admin:reviews_user_change', args=[obj.author.id])
-        return format_html('<a href="{}">{}</a>', url, obj.author.username)
-    author_link.short_description = 'Автор'
+    @admin.display(description='Автор')
+    @mark_safe
+    def author_link(self, review):
+        url = reverse('admin:reviews_user_change', args=[review.author.id])
+        return f'<a href="{url}">{review.author.username}</a>'
 
-    def text_preview(self, obj):
-        return (
-            obj.text[:MAX_LENGTH_DISPLAY_TEXT] + '...'
-            if len(obj.text) > MAX_LENGTH_DISPLAY_TEXT
-            else obj.text
-        )
-    text_preview.short_description = 'Текст (превью)'
+    @admin.display(description='Текст (превью)')
+    def text_preview(self, review):
+        return review.text[:MAX_LENGTH_DISPLAY_TEXT]
 
-    def comments_link(self, obj):
-        count = obj.comments.count()
+    @admin.display(description='Комментарии')
+    @mark_safe
+    def comments_link(self, review):
+        count = review.comments.count()
         url = (
             reverse('admin:reviews_comment_changelist')
             + '?'
-            + urlencode({'review__id': f'{obj.id}'})
+            + urlencode({'review__id': f'{review.id}'})
         )
-        return format_html('<a href="{}">{} комментариев</a>', url, count)
-    comments_link.short_description = 'Комментарии'
+        return f'<a href="{url}">{count} комментариев</a>'
 
 
 @admin.register(Comment)
@@ -91,27 +84,25 @@ class CommentAdmin(admin.ModelAdmin):
         'text_preview',
     )
     list_display_links = ('review_link',)
-    list_filter = ('review', 'author', 'pub_date')
-    search_fields = ('review__text', 'author__username', 'text')
+    list_filter = ('review', 'pub_date', 'author')
+    search_fields = ('review__text__startswith', 'author__username')
     raw_id_fields = ('review', 'author')
 
-    def review_link(self, obj):
-        url = reverse('admin:reviews_review_change', args=[obj.review.id])
-        return format_html('<a href="{}">Отзыв #{}</a>', url, obj.review.id)
-    review_link.short_description = 'Отзыв'
+    @admin.display(description='Отзыв')
+    @mark_safe
+    def review_link(self, comment):
+        url = reverse('admin:reviews_review_change', args=[comment.review.id])
+        return f'<a href="{url}">Отзыв #{comment.review.id}</a>'
 
-    def author_link(self, obj):
-        url = reverse('admin:reviews_user_change', args=[obj.author.id])
-        return format_html('<a href="{}">{}</a>', url, obj.author.username)
-    author_link.short_description = 'Автор'
+    @admin.display(description='Автор')
+    @mark_safe
+    def author_link(self, comment):
+        url = reverse('admin:reviews_user_change', args=[comment.author.id])
+        return f'<a href="{url}">{comment.author.username}</a>'
 
-    def text_preview(self, obj):
-        return (
-            obj.text[:MAX_LENGTH_DISPLAY_TEXT] + '...'
-            if len(obj.text) > MAX_LENGTH_DISPLAY_TEXT
-            else obj.text
-        )
-    text_preview.short_description = 'Текст (превью)'
+    @admin.display(description='Текст (превью)')
+    def text_preview(self, comment):
+        return comment.text[:MAX_LENGTH_DISPLAY_TEXT]
 
 
 admin.site.empty_value_display = 'Не задано'
@@ -125,7 +116,17 @@ class UserAdmin(admin.ModelAdmin):
         "email",
         "first_name",
         "last_name",
-        "bio",
+        "bio_preview",
         "role",
     )
     list_editable = ("role",)
+    search_fields = ("username", "email", "first_name", "last_name")
+    list_filter = ("role",)
+
+    def bio_preview(self, obj):
+        return (
+            obj.bio[:MAX_LENGTH_DISPLAY_TEXT] + '...'
+            if obj.bio and len(obj.bio) > MAX_LENGTH_DISPLAY_TEXT
+            else obj.bio
+        )
+    bio_preview.short_description = 'О себе'
