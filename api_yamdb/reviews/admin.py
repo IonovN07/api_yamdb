@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import reverse
-from django.utils.html import format_html
 from django.utils.http import urlencode
+from django.utils.safestring import mark_safe
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
@@ -53,20 +53,23 @@ class ReviewAdmin(admin.ModelAdmin):
     raw_id_fields = ('title', 'author')
 
     @admin.display(description='Произведение')
+    @mark_safe
     def title_link(self, review):
         url = reverse('admin:reviews_title_change', args=[review.title.id])
-        return format_html('<a href="{}">{}</a>', url, review.title.name)
+        return f'<a href="{url}">{review.title.name}</a>'
 
     @admin.display(description='Автор')
+    @mark_safe
     def author_link(self, review):
         url = reverse('admin:reviews_user_change', args=[review.author.id])
-        return format_html('<a href="{}">{}</a>', url, review.author.username)
+        return f'<a href="{url}">{review.author.username}</a>'
 
     @admin.display(description='Текст (превью)')
     def text_preview(self, review):
         return review.text[:MAX_LENGTH_DISPLAY_TEXT]
 
     @admin.display(description='Комментарии')
+    @mark_safe
     def comments_link(self, review):
         count = review.comments.count()
         url = (
@@ -74,7 +77,7 @@ class ReviewAdmin(admin.ModelAdmin):
             + '?'
             + urlencode({'review__id': f'{review.id}'})
         )
-        return format_html('<a href="{}">{} комментариев</a>', url, count)
+        return f'<a href="{url}">{count} комментариев</a>'
 
 
 @admin.register(Comment)
@@ -92,14 +95,16 @@ class CommentAdmin(admin.ModelAdmin):
     raw_id_fields = ('review', 'author')
 
     @admin.display(description='Отзыв')
+    @mark_safe
     def review_link(self, comment):
         url = reverse('admin:reviews_review_change', args=[comment.review.id])
-        return format_html('<a href="{}">Отзыв #{}</a>', url, comment.review.id)
+        return f'<a href="{url}">Отзыв #{comment.review.id}</a>'
 
     @admin.display(description='Автор')
+    @mark_safe
     def author_link(self, comment):
         url = reverse('admin:reviews_user_change', args=[comment.author.id])
-        return format_html('<a href="{}">{}</a>', url, comment.author.username)
+        return f'<a href="{url}">{comment.author.username}</a>'
 
     @admin.display(description='Текст (превью)')
     def text_preview(self, comment):
