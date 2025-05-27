@@ -84,14 +84,11 @@ def signup(request):
             email=email
         )
     except IntegrityError:
-        raise ValidationError({
-            field: [msg]
-            for field, value, msg in (
-                ('username', username, USERNAME_ERROR),
-                ('email', email, EMAIL_ERROR),
-            )
-            if User.objects.filter(**{field: value}).exists()
-        })
+        raise ValidationError(
+            {'username': [USERNAME_ERROR]}
+            if User.objects.filter(username=username).exists()
+            else {'email': [EMAIL_ERROR]}
+        )
 
     user.confirmation_code = generate_confirmation_code()
     user.save(update_fields=['confirmation_code'])
@@ -110,16 +107,14 @@ def get_token(request):
 
     user = get_object_or_404(User, username=username)
 
-    is_valid = user.confirmation_code == code
+    if user.confirmation_code and user.confirmation_code == code:
+        token = AccessToken.for_user(user)
+        return Response({"token": str(token)}, status=status.HTTP_200_OK)
 
-    user.confirmation_code = ''
-    user.save(update_fields=['confirmation_code'])
-
-    if not is_valid:
-        raise ValidationError('Неверный код подтверждения.')
-
-    token = AccessToken.for_user(user)
-    return Response({'token': str(token)}, status=status.HTTP_200_OK)
+    if user.confirmation_code:
+        user.confirmation_code = ''
+        user.save(update_fields=['confirmation_code'])
+    raise ValidationError('Неверный код.')
 
 
 class UserViewSet(viewsets.ModelViewSet):
