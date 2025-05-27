@@ -4,7 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from api.validators import validate_username_value
+from reviews.validators import validate_username_value
 
 USERNAME_MAX_LENGTH = 150
 EMAIL_MAX_LENGTH = 254
@@ -64,10 +64,6 @@ class User(AbstractUser):
         max_length=settings.CONFIRMATION_CODE_LENGTH,
         blank=True,
     )
-    confirmation_code_created = models.DateTimeField(
-        auto_now_add=True,
-        blank=True,
-    )
 
     @property
     def is_admin(self):
@@ -78,7 +74,7 @@ class User(AbstractUser):
         return self.role == MODERATOR
 
 
-class BaseGroupModel(models.Model):
+class CategoryGenreBaseModel(models.Model):
     """Базовый класс для моделей с общими свойствами."""
 
     name = models.CharField(
@@ -95,20 +91,18 @@ class BaseGroupModel(models.Model):
         return self.name[:MAX_DISPLAY_LENGTH]
 
 
-class Category(BaseGroupModel):
+class Category(CategoryGenreBaseModel):
     """Модель описывает таблицу с категориями произведений."""
 
-    class Meta(BaseGroupModel.Meta):
+    class Meta(CategoryGenreBaseModel.Meta):
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
-    help_text = 'Название категории.'
 
-
-class Genre(BaseGroupModel):
+class Genre(CategoryGenreBaseModel):
     """Модель описывает таблицу с жанрами произведений."""
 
-    class Meta(BaseGroupModel.Meta):
+    class Meta(CategoryGenreBaseModel.Meta):
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
@@ -151,7 +145,8 @@ class Title(models.Model):
 
     def __str__(self):
         return (
-            f'{self.name[:MAX_DISPLAY_LENGTH]} {self.year} '
+            f'{self.name[:MAX_DISPLAY_LENGTH]} '
+            f'{self.year} '
             f'{{self.category={self.category.name[:MAX_DISPLAY_LENGTH]}}}'
         )
 
