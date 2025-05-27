@@ -4,7 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from .validators import validate_username_value
+from reviews.validators import validate_username_value
 
 USERNAME_MAX_LENGTH = 150
 EMAIL_MAX_LENGTH = 254
