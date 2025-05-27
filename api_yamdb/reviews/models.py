@@ -4,7 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from api.validators import validate_username_value
+from .validators import validate_username_value
 
 USERNAME_MAX_LENGTH = 150
 EMAIL_MAX_LENGTH = 254
@@ -62,10 +62,6 @@ class User(AbstractUser):
     )
     confirmation_code = models.CharField(
         max_length=settings.CONFIRMATION_CODE_LENGTH,
-        blank=True,
-    )
-    confirmation_code_created = models.DateTimeField(
-        auto_now_add=True,
         blank=True,
     )
 

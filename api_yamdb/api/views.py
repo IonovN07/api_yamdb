@@ -1,12 +1,10 @@
 import random
-from datetime import timedelta
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
@@ -81,19 +79,22 @@ def signup(request):
     email = serializer.validated_data['email']
 
     try:
-        user, created = User.objects.get_or_create(username=username,
-                                                   email=email)
+        user, _ = User.objects.get_or_create(
+            username=username,
+            email=email
+        )
     except IntegrityError:
-        errors = {}
-        if User.objects.filter(username=username).exists():
-            errors['username'] = [USERNAME_ERROR]
-        if User.objects.filter(email=email).exists():
-            errors['email'] = [EMAIL_ERROR]
-        raise ValidationError(errors)
+        raise ValidationError({
+            field: [msg]
+            for field, value, msg in (
+                ('username', username, USERNAME_ERROR),
+                ('email', email, EMAIL_ERROR),
+            )
+            if User.objects.filter(**{field: value}).exists()
+        })
 
     user.confirmation_code = generate_confirmation_code()
-    user.confirmation_code_created = timezone.now()
-    user.save(update_fields=['confirmation_code', 'confirmation_code_created'])
+    user.save(update_fields=['confirmation_code'])
     send_confirmation_email(user)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -109,16 +110,12 @@ def get_token(request):
 
     user = get_object_or_404(User, username=username)
 
-    if not user.confirmation_code:
-        raise ValidationError('Код уже использован или не выдавался.')
+    is_valid = user.confirmation_code == code
 
-    # Проверка времени жизни кода
-    expiration_time = user.confirmation_code_created + timedelta(
-        minutes=settings.CONFIRMATION_CODE_EXPIRY_MINUTES)
-    if timezone.now() > expiration_time:
-        raise ValidationError('Срок действия кода истёк.')
+    user.confirmation_code = ''
+    user.save(update_fields=['confirmation_code'])
 
-    if user.confirmation_code != code:
+    if not is_valid:
         raise ValidationError('Неверный код подтверждения.')
 
     token = AccessToken.for_user(user)
@@ -126,7 +123,6 @@ def get_token(request):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-
     queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
@@ -138,7 +134,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get', 'patch'],
             url_path=settings.RESERVED_NAME,
             permission_classes=[IsAuthenticated])
-    def me(self, request):
+    def self_profile(self, request):
         if request.method == 'GET':
             return Response(UserProfileSerializer(request.user).data)
 

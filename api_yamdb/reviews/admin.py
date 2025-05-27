@@ -123,10 +123,8 @@ class UserAdmin(admin.ModelAdmin):
     search_fields = ("username", "email", "first_name", "last_name")
     list_filter = ("role",)
 
+    @admin.display(description="О себе")
     def bio_preview(self, obj):
         return (
-            obj.bio[:MAX_LENGTH_DISPLAY_TEXT] + '...'
-            if obj.bio and len(obj.bio) > MAX_LENGTH_DISPLAY_TEXT
-            else obj.bio
+            obj.bio[:MAX_LENGTH_DISPLAY_TEXT]
         )
-    bio_preview.short_description = 'О себе'
