@@ -10,17 +10,11 @@ def validate_username_value(value):
             f'Имя "{settings.RESERVED_NAME}" не разрешено.'
         )
 
-    allowed_char_class = settings.USERNAME_REGEX.strip('^\\Z')
+    allowed_char_class = settings.USERNAME_ALLOWED_CHARS
     invalid_chars = re.sub(allowed_char_class, '', value)
 
     if invalid_chars:
-        unique_invalids = ', '.join(sorted(set(invalid_chars)))
+        unique_invalids = ' '.join(dict.fromkeys(invalid_chars))
         raise ValidationError(
             f'Имя содержит недопустимые символы: {unique_invalids}'
         )
-
-
-class UsernameValidatorMixin:
-    def validate_username(self, value):
-        validate_username_value(value)
-        return value
