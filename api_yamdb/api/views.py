@@ -11,20 +11,24 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
-from rest_framework.pagination import (LimitOffsetPagination,
-                                       PageNumberPagination)
+from rest_framework.pagination import (
+    LimitOffsetPagination, PageNumberPagination
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from api.filters import TitleFilter
-from api.permissions import (IsAdmin, IsAdminOrReadOnly,
-                             IsAuthorModeratorAdminOrReadOnly)
-from api.serializers import (CategorySerializer, CommentSerializer,
-                             GenreSerializer, ReviewSerializer,
-                             SignUpSerializer, TitleViewSerializer,
-                             TitleWriteSerializer, TokenSerializer,
-                             UserProfileSerializer, UserSerializer)
+from api.permissions import (
+    IsAdmin, IsAdminOrReadOnly, IsAuthorModeratorAdminOrReadOnly
+)
+from api.serializers import (
+    CategorySerializer, CommentSerializer,
+    GenreSerializer, ReviewSerializer,
+    SignUpSerializer, TitleViewSerializer,
+    TitleWriteSerializer, TokenSerializer,
+    UserProfileSerializer, UserSerializer
+)
 from reviews.models import Category, Genre, Review, Title, User
 
 
@@ -167,7 +171,7 @@ class TitleViewSet(viewsets.ModelViewSet):
         return TitleWriteSerializer
 
 
-class MixinViewSet(
+class BaseCategoryGenreView(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
@@ -179,14 +183,14 @@ class MixinViewSet(
     lookup_field = 'slug'
 
 
-class CategoryViewSet(MixinViewSet):
+class CategoryViewSet(BaseCategoryGenreView):
     """Получить список всех категорий."""
 
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(MixinViewSet):
+class GenreViewSet(BaseCategoryGenreView):
     """Получить список всех жанров."""
 
     queryset = Genre.objects.all()
@@ -223,7 +227,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         return get_object_or_404(
             Review,
             id=self.kwargs['review_id'],
-            title_id=self.kwargs['title_id']
         )
 
     def get_queryset(self):
