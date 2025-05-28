@@ -74,7 +74,7 @@ class User(AbstractUser):
         return self.role == MODERATOR
 
 
-class CategoryGenreBaseModel(models.Model):
+class BaseNameSlugModel(models.Model):
     """Базовый класс для моделей с общими свойствами."""
 
     name = models.CharField(
@@ -91,18 +91,18 @@ class CategoryGenreBaseModel(models.Model):
         return self.name[:MAX_DISPLAY_LENGTH]
 
 
-class Category(CategoryGenreBaseModel):
+class Category(BaseNameSlugModel):
     """Модель описывает таблицу с категориями произведений."""
 
-    class Meta(CategoryGenreBaseModel.Meta):
+    class Meta(BaseNameSlugModel.Meta):
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
 
-class Genre(CategoryGenreBaseModel):
+class Genre(BaseNameSlugModel):
     """Модель описывает таблицу с жанрами произведений."""
 
-    class Meta(CategoryGenreBaseModel.Meta):
+    class Meta(BaseNameSlugModel.Meta):
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 

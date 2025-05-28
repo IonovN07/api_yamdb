@@ -5,7 +5,13 @@ from reviews.models import (
     Category, Comment, EMAIL_MAX_LENGTH, Genre, Review,
     Title, USERNAME_MAX_LENGTH, User
 )
-from reviews.validators import UsernameValidatorMixin
+from reviews.validators import validate_username_value
+
+
+class UsernameValidatorMixin:
+    def validate_username(self, value):
+        validate_username_value(value)
+        return value
 
 
 class UserSerializer(UsernameValidatorMixin, serializers.ModelSerializer):
